@@ -1125,23 +1125,51 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
 /* Calculate the total power from all sensors */
 static void calculate_total_power(pm_handle_t handle)
 {
+        /* Find VDD_IN sensor */
+        for (int i = 0; i < handle->sensor_count; i++)
+        {
+                if (strstr(handle->sensor_names[i], "VDD_IN"))
+                {
+                        /* Use VDD_IN as total power */
+                        strncpy(handle->latest_data.total.name, "Total (VDD_IN)", 
+                                sizeof(handle->latest_data.total.name) - 1);
+                        handle->latest_data.total.power = handle->latest_data.sensors[i].power;
+                        handle->latest_data.total.current = handle->latest_data.sensors[i].current;
+                        handle->latest_data.total.voltage = handle->latest_data.sensors[i].voltage;
+                        handle->latest_data.total.online = handle->latest_data.sensors[i].online;
+                        strncpy(handle->latest_data.total.status, handle->latest_data.sensors[i].status,
+                                sizeof(handle->latest_data.total.status) - 1);
+                        handle->latest_data.total.warning_threshold = 25.0;
+                        handle->latest_data.total.critical_threshold = 35.0;
+                        return;
+                }
+        }
+
+        /* If VDD_IN not found, use sum of all sensors (fallback) */
         double total_power = 0.0;
         double total_current = 0.0;
+        double total_voltage = 0.0;
+        bool all_online = true;
 
-        /* Sum up power from all sensors */
         for (int i = 0; i < handle->sensor_count; i++)
         {
                 total_power += handle->latest_data.sensors[i].power;
                 total_current += handle->latest_data.sensors[i].current;
+                if (handle->latest_data.sensors[i].voltage > total_voltage)
+                        total_voltage = handle->latest_data.sensors[i].voltage;
+                if (!handle->latest_data.sensors[i].online)
+                        all_online = false;
         }
 
         /* Update the total values */
-        strncpy(handle->latest_data.total.name, "Total", sizeof(handle->latest_data.total.name) - 1);
+        strncpy(handle->latest_data.total.name, "Total (Sum)", 
+                sizeof(handle->latest_data.total.name) - 1);
         handle->latest_data.total.power = total_power;
         handle->latest_data.total.current = total_current;
-        handle->latest_data.total.voltage = 5.0; /* Nominal system voltage */
-        handle->latest_data.total.online = true;
-        strncpy(handle->latest_data.total.status, "Normal", sizeof(handle->latest_data.total.status) - 1);
+        handle->latest_data.total.voltage = total_voltage;
+        handle->latest_data.total.online = all_online;
+        strncpy(handle->latest_data.total.status, all_online ? "Normal" : "Partial",
+                sizeof(handle->latest_data.total.status) - 1);
         handle->latest_data.total.warning_threshold = 25.0;
         handle->latest_data.total.critical_threshold = 35.0;
 }
