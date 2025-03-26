@@ -159,7 +159,7 @@ class TestJetPwMon(unittest.TestCase):
         """Test error handling functionality"""
         # Test error codes
         self.assertEqual(jetpwmon.ErrorCode.SUCCESS, 0)
-        self.assertLess(jetpwmon.ErrorCode.ERROR_INIT_FAILED, 0)
+        self.assertEqual(jetpwmon.ErrorCode.ERROR_INIT_FAILED, -1)
         
         # Test error strings
         error_msg = jetpwmon.error_string(jetpwmon.ErrorCode.SUCCESS)
