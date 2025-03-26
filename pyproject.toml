@@ -11,6 +11,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.7"
+keywords = ["jetson", "power", "monitor", "nvidia", "nvidia-jetson", "jetson-power-monitor"]
 dependencies = ["pybind11>=2.9.0", "scikit-build-core>=0.1.0"]
 
 [project.optional-dependencies]

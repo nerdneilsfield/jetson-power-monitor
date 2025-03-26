@@ -12,19 +12,20 @@
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql"><img alt="CodeQL" src="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql/badge.svg?branch=master" /></a>
 </p>
 
-English | [中文](https://github.com/nerdneilsfield/jetson-power-monitor/blob/master/README_CN.md)
+[English](https://github.com/nerdneilsfield/jetson-power-monitor/blob/master/README.md) | 中文
 
-A comprehensive power monitoring library for NVIDIA Jetson devices, available in multiple programming languages.
 
-## Features
+一个用于 NVIDIA Jetson 设备的全面电源监控库，支持多种编程语言。
 
-- Real-time power consumption monitoring
-- Support for multiple programming languages (C/C++, Rust, Python)
-- Easy installation through package managers
-- Low-level access to power metrics
-- Cross-platform support for Jetson devices
+## 特性
 
-## Installation
+- 实时电源消耗监控
+- 支持多种编程语言（C/C++、Rust、Python）
+- 通过包管理器轻松安装
+- 底层访问电源指标
+- 跨平台支持 Jetson 设备
+
+## 安装
 
 ### Python
 
@@ -34,7 +35,7 @@ pip install jetpwmon
 
 ### Rust
 
-Add to your `Cargo.toml`:
+在 `Cargo.toml` 中添加：
 
 ```toml
 [dependencies]
@@ -43,27 +44,27 @@ jetpwmon = "0.1.0"
 
 ### C/C++
 
-Download the pre-built `.deb` package from the [Releases](https://github.com/yourusername/jetson-power-monitor/releases) page:
+从 [Releases](https://github.com/yourusername/jetson-power-monitor/releases) 页面下载预编译的 `.deb` 包：
 
 ```bash
 sudo dpkg -i jetpwmon_0.1.0_amd64.deb
 ```
 
-Or use CMake to find and link the library in your project:
+或者使用 CMake 在你的项目中查找和链接库：
 
 ```cmake
 find_package(jetpwmon REQUIRED)
-target_link_libraries(your_target PRIVATE jetpwmon::jetpwmon)  # Use shared library
-# or
-target_link_libraries(your_target PRIVATE jetpwmon::static)    # Use static library
+target_link_libraries(your_target PRIVATE jetpwmon::jetpwmon)  # 使用动态库
+# 或者
+target_link_libraries(your_target PRIVATE jetpwmon::static)    # 使用静态库
 
-# For C++ bindings
-target_link_libraries(your_target PRIVATE jetpwmon::jetpwmon_cpp)  # Use shared library
-# or
-target_link_libraries(your_target PRIVATE jetpwmon::static_cpp)    # Use static library
+# 对于 C++ 绑定
+target_link_libraries(your_target PRIVATE jetpwmon::jetpwmon_cpp)  # 使用动态库
+# 或者
+target_link_libraries(your_target PRIVATE jetpwmon::static_cpp)    # 使用静态库
 ```
 
-## Usage
+## 使用方法
 
 ### Python
 
@@ -72,7 +73,7 @@ from jetpwmon import PowerMonitor
 
 monitor = PowerMonitor()
 power = monitor.get_power_consumption()
-print(f"Current power consumption: {power}W")
+print(f"当前功耗: {power}W")
 ```
 
 ### Rust
@@ -83,7 +84,7 @@ use jetpwmon::PowerMonitor;
 fn main() {
     let monitor = PowerMonitor::new().unwrap();
     let power = monitor.get_power_consumption().unwrap();
-    println!("Current power consumption: {}W", power);
+    println!("当前功耗: {}W", power);
 }
 ```
 
@@ -95,7 +96,7 @@ fn main() {
 int main() {
     PowerMonitor* monitor = power_monitor_new();
     double power = power_monitor_get_power_consumption(monitor);
-    printf("Current power consumption: %.2fW\n", power);
+    printf("当前功耗: %.2fW\n", power);
     power_monitor_free(monitor);
     return 0;
 }
@@ -109,12 +110,12 @@ int main() {
 int main() {
     PowerMonitor monitor;
     double power = monitor.get_power_consumption();
-    std::cout << "Current power consumption: " << power << "W" << std::endl;
+    std::cout << "当前功耗: " << power << "W" << std::endl;
     return 0;
 }
 ```
 
-## API Documentation
+## API 文档
 
 ### Python
 
@@ -151,16 +152,16 @@ double power_monitor_get_current(PowerMonitor* monitor);
 void power_monitor_free(PowerMonitor* monitor);
 ```
 
-## Building from Source
+## 从源码构建
 
-### Prerequisites
+### 前置要求
 
-- CMake 3.10 or higher
-- C++ compiler with C++17 support
-- Python 3.7 or higher (for Python bindings)
-- Rust toolchain (for Rust bindings)
+- CMake 3.10 或更高版本
+- 支持 C++17 的 C++ 编译器
+- Python 3.7 或更高版本（用于 Python 绑定）
+- Rust 工具链（用于 Rust 绑定）
 
-### Build Steps
+### 构建步骤
 
 ```bash
 git clone https://github.com/yourusername/jetson-power-monitor.git
@@ -171,25 +172,25 @@ make
 sudo make install
 ```
 
-## Contributing
+## 贡献
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) for detailed information about:
+我们欢迎贡献！请查看我们的 [CONTRIBUTING.md](CONTRIBUTING.md) 获取详细信息，包括：
 
-- Project architecture and implementation details
-- Development setup and guidelines
-- Code style and testing requirements
-- Pull request process
-- Common development tasks
-- Release process
+- 项目架构和实现细节
+- 开发环境设置和指南
+- 代码风格和测试要求
+- Pull Request 流程
+- 常见开发任务
+- 发布流程
 
-## License
+## 许可证
 
-This project is licensed under the `BSD 3-Clause License` License - see the [LICENSE](LICENSE) file for details.
+本项目采用 `BSD 3-Clause License` 许可证 - 详见 [LICENSE](LICENSE) 文件。
 
-## Acknowledgments
+## 致谢
 
-- NVIDIA Jetson team for their excellent hardware
-- All contributors who have helped with this project
+- NVIDIA Jetson 团队提供的出色硬件
+- 所有为本项目做出贡献的开发者
 - [jetson_stats](https://github.com/rbonghi/jetson_stats)
 
 ## Star History

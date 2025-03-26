@@ -1,0 +1,6 @@
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/jetpwmon-targets.cmake" OPTIONAL)
+
+set(JETPWMON_LIBRARIES jetpwmon)
+set(JETPWMON_INCLUDE_DIRS "@CMAKE_INSTALL_PREFIX@/include") 
