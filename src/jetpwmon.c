@@ -689,6 +689,13 @@ static pm_error_t find_driver_power_folders(pm_handle_t handle, const char *path
                         continue;
                 }
 
+                /* Check if the combined path would fit in the buffer */
+                size_t path_len = strlen(path);
+                size_t name_len = strlen(entry->d_name);
+                if (path_len + 1 + name_len >= sizeof(driver_path)) {
+                        continue; /* Skip if path would be too long */
+                }
+
                 snprintf(driver_path, sizeof(driver_path), "%s/%s", path, entry->d_name);
 
                 if (is_directory(driver_path))

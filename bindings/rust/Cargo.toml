@@ -8,10 +8,25 @@ license = "BSD-3-Clause"
 
 [dependencies]
 libc = "0.2"
-rand = "0.9.0"
+rand = "0.8"
 
 [build-dependencies]
 cc = "1.0"
 
 [lib]
 crate-type = ["rlib"]
+
+[dev-dependencies]
+ndarray = "0.16.1"
+
+[[example]]
+name = "matrix_multiply"
+path = "examples/matrix_multiply.rs"
+
+[[example]]
+name = "cpu_monitor"
+path = "examples/cpu_monitor.rs"
+
+[[example]]
+name = "basic"
+path = "examples/basic.rs"

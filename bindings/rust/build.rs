@@ -4,6 +4,8 @@ fn main() {
         .file("../../src/jetpwmon.c")
         .include("../../include")
         .flag("-std=c99")
+        .flag("-Wall")
+        .flag("-Wextra")
         .compile("jetpwmon");
 
     println!("cargo:rerun-if-changed=src/lib.rs");

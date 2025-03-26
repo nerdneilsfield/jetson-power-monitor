@@ -30,6 +30,18 @@ install-python: ## Install python test
 install-python-dev: ## Install python dev
 	python -m pip install -e .[dev]
 
-.PHONY: test
-test: ## Run the tests
+
+.PHONY: test-python
+test-python: install-python-dev ## Run the tests
 	python -m pytest tests
+
+.PHONY: test-rust
+test-rust: ## Run the tests
+	cd bindings/rust && cargo test
+
+.PHONY: example-rust
+example-rust: ## Run the examples
+	cd bindings/rust && cargo run --example cpu_monitor
+
+
+	

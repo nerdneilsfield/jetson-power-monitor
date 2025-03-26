@@ -3,10 +3,12 @@ use std::ptr::NonNull;
 
 /// A handle to the power monitor instance
 #[repr(C)]
+#[derive(Debug)]
 pub struct PowerHandle(*mut c_void);
 
 /// Types of power sensors supported by the library
 #[repr(C)]
+#[derive(Debug)]
 pub enum SensorType {
     /// Unknown sensor type
     Unknown = 0,
@@ -18,6 +20,7 @@ pub enum SensorType {
 
 /// Power data for a single sensor
 #[repr(C)]
+#[derive(Debug)]
 pub struct SensorData {
     /// Sensor name
     pub name: [u8; 64],
@@ -41,6 +44,7 @@ pub struct SensorData {
 
 /// Statistical data for a metric
 #[repr(C)]
+#[derive(Debug)]
 pub struct Stats {
     /// Minimum value
     pub min: f64,
@@ -56,6 +60,7 @@ pub struct Stats {
 
 /// Power statistics for a sensor
 #[repr(C)]
+#[derive(Debug)]
 pub struct SensorStats {
     /// Sensor name
     pub name: [u8; 64],
@@ -69,6 +74,7 @@ pub struct SensorStats {
 
 /// Overall power data
 #[repr(C)]
+#[derive(Debug)]
 pub struct PowerData {
     /// Total power consumption
     pub total: SensorData,
@@ -80,6 +86,7 @@ pub struct PowerData {
 
 /// Overall power statistics
 #[repr(C)]
+#[derive(Debug)]
 pub struct PowerStats {
     /// Total power statistics
     pub total: SensorStats,
@@ -91,27 +98,28 @@ pub struct PowerStats {
 
 /// Error codes returned by library functions
 #[derive(Debug)]
+#[repr(i32)]
 pub enum Error {
     /// Initialization failed
-    InitFailed,
+    InitFailed = -1,
     /// Library not initialized
-    NotInitialized,
+    NotInitialized = -2,
     /// Sampling already running
-    AlreadyRunning,
+    AlreadyRunning = -3,
     /// Sampling not running
-    NotRunning,
+    NotRunning = -4,
     /// Invalid sampling frequency
-    InvalidFrequency,
+    InvalidFrequency = -5,
     /// No power sensors found
-    NoSensors,
+    NoSensors = -6,
     /// Error accessing sensor files
-    FileAccess,
+    FileAccess = -7,
     /// Memory allocation error
-    Memory,
+    Memory = -8,
     /// Thread creation/management error
-    Thread,
+    Thread = -9,
     /// Unknown error code
-    Unknown(i32),
+    Unknown(i32) = -10,
 }
 
 impl From<i32> for Error {
@@ -127,6 +135,23 @@ impl From<i32> for Error {
             -8 => Error::Memory,
             -9 => Error::Thread,
             _ => Error::Unknown(code),
+        }
+    }
+}
+
+impl From<Error> for i32 {
+    fn from(error: Error) -> Self {
+        match error {
+            Error::InitFailed => -1,
+            Error::NotInitialized => -2,
+            Error::AlreadyRunning => -3,
+            Error::NotRunning => -4,
+            Error::InvalidFrequency => -5,
+            Error::NoSensors => -6,
+            Error::FileAccess => -7,
+            Error::Memory => -8,
+            Error::Thread => -9,
+            Error::Unknown(code) => code,
         }
     }
 }
@@ -333,7 +358,7 @@ impl PowerMonitor {
         }
         Ok(names
             .into_iter()
-            .map(|ptr| unsafe { CString::from_raw(ptr).into_string().unwrap() })
+            .map(|ptr| unsafe { CString::from_raw(ptr as *mut i8).into_string().unwrap() })
             .collect())
     }
 }

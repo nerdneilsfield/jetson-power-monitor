@@ -151,16 +151,16 @@ fn test_sensor_info() {
 
 /// Test error code values
 #[test]
-fn test_error_handling() {
-    assert_eq!(Error::InitFailed as i32, -1);
-    assert_eq!(Error::NotInitialized as i32, -2);
-    assert_eq!(Error::AlreadyRunning as i32, -3);
-    assert_eq!(Error::NotRunning as i32, -4);
-    assert_eq!(Error::InvalidFrequency as i32, -5);
-    assert_eq!(Error::NoSensors as i32, -6);
-    assert_eq!(Error::FileAccess as i32, -7);
-    assert_eq!(Error::Memory as i32, -8);
-    assert_eq!(Error::Thread as i32, -9);
+fn test_error_codes() {
+    assert_eq!(i32::from(Error::InitFailed), -1);
+    assert_eq!(i32::from(Error::NotInitialized), -2);
+    assert_eq!(i32::from(Error::AlreadyRunning), -3);
+    assert_eq!(i32::from(Error::NotRunning), -4);
+    assert_eq!(i32::from(Error::InvalidFrequency), -5);
+    assert_eq!(i32::from(Error::NoSensors), -6);
+    assert_eq!(i32::from(Error::FileAccess), -7);
+    assert_eq!(i32::from(Error::Memory), -8);
+    assert_eq!(i32::from(Error::Thread), -9);
 }
 
 /// Test sensor type values
