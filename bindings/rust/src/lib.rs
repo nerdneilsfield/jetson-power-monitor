@@ -348,7 +348,7 @@ impl PowerMonitor {
         
         // 为每个字符串分配内存
         for i in 0..count as usize {
-            names[i] = unsafe { std::alloc::alloc(std::alloc::Layout::array::<u8>(64).unwrap()) as *mut i8 };
+            names[i] = unsafe { std::alloc::alloc(std::alloc::Layout::array::<i8>(64).unwrap()) as *mut i8 };
         }
         
         let mut count = count;
@@ -364,7 +364,7 @@ impl PowerMonitor {
             // 清理内存
             for ptr in names.iter() {
                 if !ptr.is_null() {
-                    unsafe { std::alloc::dealloc(*ptr as *mut u8, std::alloc::Layout::array::<u8>(64).unwrap()) };
+                    unsafe { std::alloc::dealloc(*ptr as *mut u8, std::alloc::Layout::array::<i8>(64).unwrap()) };
                 }
             }
             return Err(result.into());
