@@ -1060,6 +1060,10 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
 /* Read sensor data */
 static pm_error_t read_sensor_data(pm_handle_t handle)
 {
+        if (!handle || !handle->latest_data.sensors) {
+                return PM_ERROR_NOT_INITIALIZED;
+        }
+
         /* Lock the mutex to update the data */
         pthread_mutex_lock(&handle->data_mutex);
 
@@ -1079,10 +1083,17 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
                 {
                         char *name = handle->sensor_names[i];
+                        if (!name) {
+                                read_success = false;
+                                continue;
+                        }
                         if (strstr(name, "VDD_IN")) port_number = 1;
                         else if (strstr(name, "VDD_CPU_GPU_CV")) port_number = 2;
                         else if (strstr(name, "VDD_SOC")) port_number = 3;
                 }
+
+                /* Temporarily unlock mutex while reading files */
+                pthread_mutex_unlock(&handle->data_mutex);
 
                 /* Construct paths based on sensor type */
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
@@ -1198,6 +1209,9 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         #endif
                 }
 
+                /* Lock mutex again to update shared data */
+                pthread_mutex_lock(&handle->data_mutex);
+
                 /* Convert units and validate readings */
                 if (read_success)
                 {
@@ -1282,6 +1296,7 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 strncpy(handle->latest_data.sensors[i].status, 
                         read_success ? "Normal" : "Error", 
                         sizeof(handle->latest_data.sensors[i].status) - 1);
+                handle->latest_data.sensors[i].status[sizeof(handle->latest_data.sensors[i].status) - 1] = '\0';
 
                 /* Set thresholds based on sensor type */
                 if (strstr(handle->sensor_names[i], "VDD_IN"))
@@ -1309,6 +1324,9 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
         /* Calculate total power */
         calculate_total_power(handle);
 
+        /* Update statistics */
+        update_statistics(handle);
+
         pthread_mutex_unlock(&handle->data_mutex);
         return PM_SUCCESS;
 }
@@ -1316,20 +1334,31 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
 /* Calculate the total power from all sensors */
 static void calculate_total_power(pm_handle_t handle)
 {
+        if (!handle || !handle->latest_data.sensors || !handle->sensor_names) {
+                return;
+        }
+
         /* Find VDD_IN sensor */
         for (int i = 0; i < handle->sensor_count; i++)
         {
+                if (!handle->sensor_names[i]) continue;
+
                 if (strstr(handle->sensor_names[i], "VDD_IN"))
                 {
                         /* Use VDD_IN as total power */
                         strncpy(handle->latest_data.total.name, "Total (VDD_IN)", 
                                 sizeof(handle->latest_data.total.name) - 1);
+                        handle->latest_data.total.name[sizeof(handle->latest_data.total.name) - 1] = '\0';
+                        
                         handle->latest_data.total.power = handle->latest_data.sensors[i].power;
                         handle->latest_data.total.current = handle->latest_data.sensors[i].current;
                         handle->latest_data.total.voltage = handle->latest_data.sensors[i].voltage;
                         handle->latest_data.total.online = handle->latest_data.sensors[i].online;
+                        
                         strncpy(handle->latest_data.total.status, handle->latest_data.sensors[i].status,
                                 sizeof(handle->latest_data.total.status) - 1);
+                        handle->latest_data.total.status[sizeof(handle->latest_data.total.status) - 1] = '\0';
+                        
                         handle->latest_data.total.warning_threshold = 25.0;
                         handle->latest_data.total.critical_threshold = 35.0;
                         return;
@@ -1344,23 +1373,30 @@ static void calculate_total_power(pm_handle_t handle)
 
         for (int i = 0; i < handle->sensor_count; i++)
         {
+                if (!handle->latest_data.sensors[i].online) {
+                        all_online = false;
+                        continue;
+                }
                 total_power += handle->latest_data.sensors[i].power;
                 total_current += handle->latest_data.sensors[i].current;
                 if (handle->latest_data.sensors[i].voltage > total_voltage)
                         total_voltage = handle->latest_data.sensors[i].voltage;
-                if (!handle->latest_data.sensors[i].online)
-                        all_online = false;
         }
 
         /* Update the total values */
         strncpy(handle->latest_data.total.name, "Total (Sum)", 
                 sizeof(handle->latest_data.total.name) - 1);
+        handle->latest_data.total.name[sizeof(handle->latest_data.total.name) - 1] = '\0';
+        
         handle->latest_data.total.power = total_power;
         handle->latest_data.total.current = total_current;
         handle->latest_data.total.voltage = total_voltage;
         handle->latest_data.total.online = all_online;
+        
         strncpy(handle->latest_data.total.status, all_online ? "Normal" : "Partial",
                 sizeof(handle->latest_data.total.status) - 1);
+        handle->latest_data.total.status[sizeof(handle->latest_data.total.status) - 1] = '\0';
+        
         handle->latest_data.total.warning_threshold = 25.0;
         handle->latest_data.total.critical_threshold = 35.0;
 }
@@ -1368,12 +1404,15 @@ static void calculate_total_power(pm_handle_t handle)
 /* Update the statistics */
 static pm_error_t update_statistics(pm_handle_t handle)
 {
-        /* Lock the mutex to update the statistics */
-        pthread_mutex_lock(&handle->data_mutex);
+        if (!handle || !handle->latest_data.sensors || !handle->statistics.sensors) {
+                return PM_ERROR_NOT_INITIALIZED;
+        }
 
         /* Update the sensor statistics */
         for (int i = 0; i < handle->sensor_count; i++)
         {
+                if (!handle->latest_data.sensors[i].online) continue;
+
                 /* Voltage */
                 if (handle->statistics.sensors[i].voltage.count == 0)
                 {
@@ -1394,7 +1433,8 @@ static pm_error_t update_statistics(pm_handle_t handle)
 
                 handle->statistics.sensors[i].voltage.total += handle->latest_data.sensors[i].voltage;
                 handle->statistics.sensors[i].voltage.count++;
-                handle->statistics.sensors[i].voltage.avg = handle->statistics.sensors[i].voltage.total / handle->statistics.sensors[i].voltage.count;
+                handle->statistics.sensors[i].voltage.avg = 
+                        handle->statistics.sensors[i].voltage.total / handle->statistics.sensors[i].voltage.count;
 
                 /* Current */
                 if (handle->statistics.sensors[i].current.count == 0)
@@ -1416,7 +1456,8 @@ static pm_error_t update_statistics(pm_handle_t handle)
 
                 handle->statistics.sensors[i].current.total += handle->latest_data.sensors[i].current;
                 handle->statistics.sensors[i].current.count++;
-                handle->statistics.sensors[i].current.avg = handle->statistics.sensors[i].current.total / handle->statistics.sensors[i].current.count;
+                handle->statistics.sensors[i].current.avg = 
+                        handle->statistics.sensors[i].current.total / handle->statistics.sensors[i].current.count;
 
                 /* Power */
                 if (handle->statistics.sensors[i].power.count == 0)
@@ -1438,10 +1479,15 @@ static pm_error_t update_statistics(pm_handle_t handle)
 
                 handle->statistics.sensors[i].power.total += handle->latest_data.sensors[i].power;
                 handle->statistics.sensors[i].power.count++;
-                handle->statistics.sensors[i].power.avg = handle->statistics.sensors[i].power.total / handle->statistics.sensors[i].power.count;
+                handle->statistics.sensors[i].power.avg = 
+                        handle->statistics.sensors[i].power.total / handle->statistics.sensors[i].power.count;
         }
 
         /* Update the total statistics */
+        if (!handle->latest_data.total.online) {
+                return PM_SUCCESS;
+        }
+
         if (handle->statistics.total.power.count == 0)
         {
                 handle->statistics.total.power.min = handle->latest_data.total.power;
@@ -1486,17 +1532,19 @@ static pm_error_t update_statistics(pm_handle_t handle)
 
         handle->statistics.total.power.total += handle->latest_data.total.power;
         handle->statistics.total.power.count++;
-        handle->statistics.total.power.avg = handle->statistics.total.power.total / handle->statistics.total.power.count;
+        handle->statistics.total.power.avg = 
+                handle->statistics.total.power.total / handle->statistics.total.power.count;
 
         handle->statistics.total.current.total += handle->latest_data.total.current;
         handle->statistics.total.current.count++;
-        handle->statistics.total.current.avg = handle->statistics.total.current.total / handle->statistics.total.current.count;
+        handle->statistics.total.current.avg = 
+                handle->statistics.total.current.total / handle->statistics.total.current.count;
 
         handle->statistics.total.voltage.total += handle->latest_data.total.voltage;
         handle->statistics.total.voltage.count++;
-        handle->statistics.total.voltage.avg = handle->statistics.total.voltage.total / handle->statistics.total.voltage.count;
+        handle->statistics.total.voltage.avg = 
+                handle->statistics.total.voltage.total / handle->statistics.total.voltage.count;
 
-        pthread_mutex_unlock(&handle->data_mutex);
         return PM_SUCCESS;
 }
 
