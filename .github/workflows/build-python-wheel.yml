@@ -41,7 +41,7 @@ jobs:
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
-          CIBW_BUILD: cp${{ matrix.python/.//''}}-*
+          CIBW_BUILD: cp${{ matrix.python | replace('.', '') }}-*
           CIBW_SKIP: "*-musllinux*" # Skips musllinux, only builds manylinux
           # If you want to skip tests (if tests run too slow in ARM emulators)
           CIBW_TEST_SKIP: "*"
@@ -61,6 +61,9 @@ jobs:
     needs: build_wheels
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
       # Directly uses the previously built wheel files, no need to download again
       - name: Download all artifacts
