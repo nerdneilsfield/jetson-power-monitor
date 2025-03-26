@@ -32,8 +32,8 @@ install-python-dev: ## Install python dev
 
 
 .PHONY: test-python
-test-python: install-python-dev ## Run the tests
-	python -m pytest tests
+test-python: ## Run the tests
+	python tests/test.py
 
 .PHONY: test-rust
 test-rust: ## Run the tests
@@ -41,7 +41,9 @@ test-rust: ## Run the tests
 
 .PHONY: example-rust
 example-rust: ## Run the examples
-	cd bindings/rust && cargo run --example cpu_monitor
+	cd bindings/rust && cargo run --example matrix_multiply
 
-
+.PHONY: clean-rust
+clean-rust: ## Clean the rust project
+	cd bindings/rust && cargo clean
 	
