@@ -20,6 +20,8 @@ include = [
     "../../include/**/*",
     "../../src/**/*",
     "examples/**/*",
+    "tests/**/*",
+    "build.rs",
 ]
 
 [dependencies]
