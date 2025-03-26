@@ -137,3 +137,10 @@ set(CPACK_DEBIAN_HEADERS_PACKAGE_DEPENDS "libjetpwmon (= ${PROJECT_VERSION})")
 # 包含 CPack 模块
 include(CPack)
 
+# Add option for debug output
+option(SHOW_ALL "Show all debug output" OFF)
+
+if(SHOW_ALL)
+    target_compile_definitions(jetpwmon PRIVATE SHOW_ALL_DEBUG)
+endif()
+

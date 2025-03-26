@@ -918,14 +918,28 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
                                         }
 
                                         /* Get port number from the file name */
-                                        int port_number = 0;
+                                        int port_number = -1;
                                         if (strstr(entry->d_name, "_label"))
                                         {
-                                                sscanf(entry->d_name, "in%d_label", &port_number);
+                                                if (sscanf(entry->d_name, "in%d_label", &port_number) != 1)
+                                                {
+                                                    #ifdef SHOW_ALL_DEBUG
+                                                    printf("Failed to parse port number from %s\n", entry->d_name);
+                                                    #endif
+                                                    fclose(fp);
+                                                    continue;
+                                                }
                                         }
                                         else
                                         {
-                                                sscanf(entry->d_name, "rail_name_%d", &port_number);
+                                                if (sscanf(entry->d_name, "rail_name_%d", &port_number) != 1)
+                                                {
+                                                    #ifdef SHOW_ALL_DEBUG
+                                                    printf("Failed to parse port number from %s\n", entry->d_name);
+                                                    #endif
+                                                    fclose(fp);
+                                                    continue;
+                                                }
                                         }
 
                                         /* Skip "sum of shunt voltages" (port 7) */
@@ -939,21 +953,38 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
                                         char volt_path[512], curr_path[512];
                                         bool has_volt = false, has_curr = false;
 
-                                        /* For JP5 or above (hwmon format) */
-                                        if (strstr(entry->d_name, "_label"))
+                                        /* Try both hwmon and iio formats */
+                                        if (strstr(path, "hwmon"))
                                         {
+                                                /* Try hwmon format first */
                                                 snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", path, port_number);
                                                 snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", path, port_number);
+                                                has_volt = check_file_exists(volt_path);
+                                                has_curr = check_file_exists(curr_path);
+
+                                                /* If not found, try alternative hwmon format */
+                                                if (!has_volt || !has_curr)
+                                                {
+                                                        snprintf(volt_path, sizeof(volt_path), "%s/voltage%d_input", path, port_number);
+                                                        snprintf(curr_path, sizeof(curr_path), "%s/current%d_input", path, port_number);
+                                                        has_volt = check_file_exists(volt_path);
+                                                        has_curr = check_file_exists(curr_path);
+                                                }
                                         }
-                                        /* For JP4 or below (iio format) */
                                         else
                                         {
+                                                /* Try iio format */
                                                 snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", path, port_number);
                                                 snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", path, port_number);
+                                                has_volt = check_file_exists(volt_path);
+                                                has_curr = check_file_exists(curr_path);
                                         }
 
-                                        has_volt = check_file_exists(volt_path);
-                                        has_curr = check_file_exists(curr_path);
+                                        #ifdef SHOW_ALL_DEBUG
+                                        printf("Checking sensor %s (port %d):\n", buffer, port_number);
+                                        printf("  Voltage path: %s (exists: %d)\n", volt_path, has_volt);
+                                        printf("  Current path: %s (exists: %d)\n", curr_path, has_curr);
+                                        #endif
 
                                         /* Only add sensors with both voltage and current */
                                         if (has_volt && has_curr)
@@ -983,6 +1014,12 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
 
                                                 printf("Found I2C power sensor: %s (port %d)\n", buffer, port_number);
                                         }
+                                        #ifdef SHOW_ALL_DEBUG
+                                        else
+                                        {
+                                                printf("Skipped sensor %s: missing voltage or current capability\n", buffer);
+                                        }
+                                        #endif
                                 }
                                 fclose(fp);
                         }
@@ -1023,27 +1060,38 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 /* Construct paths based on sensor type */
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
                 {
-                        /* For JP5 or above (hwmon format) */
+                        /* Try both hwmon and iio formats */
                         if (strstr(handle->sensor_paths[i], "hwmon"))
                         {
+                                /* Try hwmon format first */
                                 snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", 
                                         handle->sensor_paths[i], port_number);
                                 snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", 
                                         handle->sensor_paths[i], port_number);
+
+                                /* If files don't exist, try alternative hwmon format */
+                                if (!check_file_exists(volt_path) || !check_file_exists(curr_path))
+                                {
+                                        snprintf(volt_path, sizeof(volt_path), "%s/voltage%d_input", 
+                                                handle->sensor_paths[i], port_number);
+                                        snprintf(curr_path, sizeof(curr_path), "%s/current%d_input", 
+                                                handle->sensor_paths[i], port_number);
+                                }
                         }
-                        /* For JP4 or below (iio format) */
                         else
                         {
+                                /* Try iio format */
                                 snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", 
                                         handle->sensor_paths[i], port_number);
                                 snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", 
                                         handle->sensor_paths[i], port_number);
                         }
 
-                        /* Debug output */
-                        printf("Sensor %s (port %d):\n", handle->sensor_names[i], port_number);
+                        #ifdef SHOW_ALL_DEBUG
+                        printf("Reading sensor %s (port %d):\n", handle->sensor_names[i], port_number);
                         printf("  Voltage path: %s\n", volt_path);
                         printf("  Current path: %s\n", curr_path);
+                        #endif
                 }
                 else /* PM_SENSOR_TYPE_SYSTEM */
                 {
@@ -1057,49 +1105,91 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 fp = fopen(volt_path, "r");
                 if (fp)
                 {
-                        if (fscanf(fp, "%lf", &voltage) != 1)
+                        char line[256];
+                        if (fgets(line, sizeof(line), fp))
                         {
-                                read_success = false;
-                                printf("  Failed to read voltage from %s\n", volt_path);
+                                voltage = strtod(line, NULL);
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Raw voltage: %lf\n", voltage);
+                                #endif
                         }
                         else
                         {
-                                printf("  Raw voltage: %lf\n", voltage);
+                                read_success = false;
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Failed to read voltage from %s\n", volt_path);
+                                #endif
                         }
                         fclose(fp);
                 }
                 else
                 {
                         read_success = false;
+                        #ifdef SHOW_ALL_DEBUG
                         printf("  Cannot open voltage file: %s\n", volt_path);
+                        #endif
                 }
 
                 /* Read current */
                 fp = fopen(curr_path, "r");
                 if (fp)
                 {
-                        if (fscanf(fp, "%lf", &current) != 1)
+                        char line[256];
+                        if (fgets(line, sizeof(line), fp))
                         {
-                                read_success = false;
-                                printf("  Failed to read current from %s\n", curr_path);
+                                current = strtod(line, NULL);
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Raw current: %lf\n", current);
+                                #endif
                         }
                         else
                         {
-                                printf("  Raw current: %lf\n", current);
+                                read_success = false;
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Failed to read current from %s\n", curr_path);
+                                #endif
                         }
                         fclose(fp);
                 }
                 else
                 {
                         read_success = false;
+                        #ifdef SHOW_ALL_DEBUG
                         printf("  Cannot open current file: %s\n", curr_path);
+                        #endif
                 }
 
-                /* Convert units if needed (some sensors report in microvolts/microamps) */
-                if (voltage > 1000.0) voltage /= 1000000.0;  /* Convert μV to V */
-                if (current > 1000.0) current /= 1000000.0;  /* Convert μA to A */
+                /* Convert units and validate readings */
+                if (read_success)
+                {
+                        /* Convert from mV to V and mA to A */
+                        voltage /= 1000.0;
+                        current /= 1000.0;
 
-                printf("  Converted values: %.3f V, %.3f A\n", voltage, current);
+                        /* Validate readings */
+                        if (voltage < 0.0 || voltage > 50.0)  /* Reasonable voltage range */
+                        {
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Invalid voltage reading: %.3f V\n", voltage);
+                                #endif
+                                read_success = false;
+                        }
+                        if (current < 0.0 || current > 20.0)  /* Reasonable current range */
+                        {
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Invalid current reading: %.3f A\n", current);
+                                #endif
+                                read_success = false;
+                        }
+
+                        #ifdef SHOW_ALL_DEBUG
+                        if (read_success)
+                        {
+                                printf("  Converted values: %.3f V, %.3f A\n", voltage, current);
+                                printf("  Calculated power: %.3f W\n", voltage * current);
+                        }
+                        #endif
+                }
 
                 /* Update sensor data */
                 handle->latest_data.sensors[i].voltage = voltage;
