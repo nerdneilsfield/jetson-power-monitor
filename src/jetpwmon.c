@@ -1201,30 +1201,28 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 /* Convert units and validate readings */
                 if (read_success)
                 {
-                        /* Convert from mV to V and mA to A */
-                        voltage /= 1000.0;
-                        current /= 1000.0;
+                        /* Convert from uV to V and uA to A */
+                        voltage /= 1000000.0;  /* uV to V */
+                        current /= 1000000.0;  /* uA to A */
 
                         /* Validate readings based on sensor type */
                         bool valid_reading = true;
                         if (strstr(handle->sensor_names[i], "VDD_IN"))
                         {
-                                /* VDD_IN 是系统总功耗,电压应该是 5V */
-                                if (voltage < 4.5 || voltage > 5.5) valid_reading = false;
+                                /* VDD_IN 是系统总功耗 */
+                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
                                 if (current < 0.0 || current > 10.0) valid_reading = false;
                         }
                         else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
                         {
                                 /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
-                                /* 电压应该在 0.5-1.5V 范围内 */
-                                if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
-                                if (current < 0.0 || current > 20.0) valid_reading = false;
+                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
+                                if (current < 0.0 || current > 10.0) valid_reading = false;
                         }
                         else if (strstr(handle->sensor_names[i], "VDD_SOC"))
                         {
                                 /* VDD_SOC 是 SoC 电源轨 */
-                                /* 电压应该在 0.5-1.5V 范围内 */
-                                if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
+                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
                                 if (current < 0.0 || current > 10.0) valid_reading = false;
                         }
 
