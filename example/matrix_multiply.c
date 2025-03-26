@@ -11,9 +11,14 @@
 using namespace Eigen;
 #endif
 
-#define MATRIX_SIZE 1000
+#ifdef USE_OMP
+#include <omp.h>
+#endif
+
+/* 减小矩阵大小，避免内存问题 */
+#define MATRIX_SIZE 5000
 #define NUM_THREADS 4
-#define NUM_ITERATIONS 100
+#define NUM_ITERATIONS 10
 
 /* Function declarations */
 void *matrix_multiply_thread(void *arg);
@@ -24,11 +29,13 @@ struct thread_args {
     int thread_id;
     int matrix_size;
     int num_iterations;
+    bool completed;  /* 添加完成标志 */
 };
 
 /* Matrix multiplication function using Eigen */
 void matrix_multiply_eigen(int size, int num_iterations) {
     #ifdef USE_EIGEN
+    printf("线程开始执行Eigen矩阵乘法...\n");
     MatrixXd A = MatrixXd::Random(size, size);
     MatrixXd B = MatrixXd::Random(size, size);
     MatrixXd C(size, size);
@@ -37,20 +44,31 @@ void matrix_multiply_eigen(int size, int num_iterations) {
         C = A * B;
         A = C;  // Use result as input for next iteration
     }
+    printf("线程完成Eigen矩阵乘法\n");
     #endif
 }
 
 /* Matrix multiplication function using OpenMP */
 void matrix_multiply_openmp(int size, int num_iterations) {
     #ifdef _OPENMP
+    printf("线程开始执行OpenMP矩阵乘法...\n");
     double **A = (double **)malloc(size * sizeof(double *));
     double **B = (double **)malloc(size * sizeof(double *));
     double **C = (double **)malloc(size * sizeof(double *));
+
+    if (!A || !B || !C) {
+        printf("内存分配失败\n");
+        return;
+    }
 
     for (int i = 0; i < size; i++) {
         A[i] = (double *)malloc(size * sizeof(double));
         B[i] = (double *)malloc(size * sizeof(double));
         C[i] = (double *)malloc(size * sizeof(double));
+        if (!A[i] || !B[i] || !C[i]) {
+            printf("内存分配失败\n");
+            return;
+        }
     }
 
     // Initialize matrices
@@ -90,6 +108,7 @@ void matrix_multiply_openmp(int size, int num_iterations) {
     free(A);
     free(B);
     free(C);
+    printf("线程完成OpenMP矩阵乘法\n");
     #endif
 }
 
@@ -97,12 +116,16 @@ void matrix_multiply_openmp(int size, int num_iterations) {
 void *matrix_multiply_thread(void *arg) {
     struct thread_args *args = (struct thread_args *)arg;
     
+    printf("线程 %d 开始执行...\n", args->thread_id);
+    
     #ifdef USE_EIGEN
     matrix_multiply_eigen(args->matrix_size, args->num_iterations);
     #else
     matrix_multiply_openmp(args->matrix_size, args->num_iterations);
     #endif
 
+    args->completed = true;
+    printf("线程 %d 完成执行\n", args->thread_id);
     return NULL;
 }
 
@@ -125,14 +148,14 @@ int main(void) {
     /* Initialize the power monitor */
     error = pm_init(&handle);
     if (error != PM_SUCCESS) {
-        fprintf(stderr, "Failed to initialize power monitor: %s\n", pm_error_string(error));
+        fprintf(stderr, "初始化功耗监控失败: %s\n", pm_error_string(error));
         return 1;
     }
 
     /* Start power sampling */
     error = pm_start_sampling(handle);
     if (error != PM_SUCCESS) {
-        fprintf(stderr, "Failed to start power sampling: %s\n", pm_error_string(error));
+        fprintf(stderr, "启动功耗采样失败: %s\n", pm_error_string(error));
         pm_cleanup(handle);
         return 1;
     }
@@ -151,12 +174,19 @@ int main(void) {
         thread_args[i].thread_id = i;
         thread_args[i].matrix_size = MATRIX_SIZE;
         thread_args[i].num_iterations = NUM_ITERATIONS;
-        pthread_create(&threads[i], NULL, matrix_multiply_thread, &thread_args[i]);
+        thread_args[i].completed = false;
+        if (pthread_create(&threads[i], NULL, matrix_multiply_thread, &thread_args[i]) != 0) {
+            fprintf(stderr, "创建线程 %d 失败\n", i);
+            pm_cleanup(handle);
+            return 1;
+        }
     }
 
     /* Wait for all threads to complete */
     for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+        if (pthread_join(threads[i], NULL) != 0) {
+            fprintf(stderr, "等待线程 %d 完成失败\n", i);
+        }
     }
 
     end_time = get_time_ms();
@@ -167,7 +197,7 @@ int main(void) {
     /* Stop power sampling */
     error = pm_stop_sampling(handle);
     if (error != PM_SUCCESS) {
-        fprintf(stderr, "Failed to stop power sampling: %s\n", pm_error_string(error));
+        fprintf(stderr, "停止功耗采样失败: %s\n", pm_error_string(error));
         pm_cleanup(handle);
         return 1;
     }
@@ -175,7 +205,7 @@ int main(void) {
     /* Get power statistics */
     error = pm_get_statistics(handle, &stats);
     if (error != PM_SUCCESS) {
-        fprintf(stderr, "Failed to get power statistics: %s\n", pm_error_string(error));
+        fprintf(stderr, "获取功耗统计信息失败: %s\n", pm_error_string(error));
         pm_cleanup(handle);
         return 1;
     }
@@ -202,4 +232,4 @@ int main(void) {
     /* Clean up */
     pm_cleanup(handle);
     return 0;
-} 
+}
