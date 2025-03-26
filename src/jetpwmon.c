@@ -1052,9 +1052,13 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
                 {
                         char *name = handle->sensor_names[i];
-                        if (strstr(name, "VDD_IN")) port_number = 0;
-                        else if (strstr(name, "VDD_CPU_GPU_CV")) port_number = 1;
-                        else if (strstr(name, "VDD_SOC")) port_number = 2;
+                        if (strstr(name, "VDD_IN")) port_number = 1;
+                        else if (strstr(name, "VDD_CPU_GPU_CV")) port_number = 2;
+                        else if (strstr(name, "VDD_SOC")) port_number = 3;
+                        else if (strstr(name, "VDD_DDR")) port_number = 4;
+                        else if (strstr(name, "VDD_5V0")) port_number = 5;
+                        else if (strstr(name, "VDD_3V3")) port_number = 6;
+                        else if (strstr(name, "VDD_1V8")) port_number = 7;
                 }
 
                 /* Construct paths based on sensor type */
@@ -1166,18 +1170,49 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         voltage /= 1000.0;
                         current /= 1000.0;
 
-                        /* Validate readings */
-                        if (voltage < 0.0 || voltage > 50.0)  /* Reasonable voltage range */
+                        /* Validate readings based on sensor type */
+                        bool valid_reading = true;
+                        if (strstr(handle->sensor_names[i], "VDD_IN"))
                         {
-                                #ifdef SHOW_ALL_DEBUG
-                                printf("  Invalid voltage reading: %.3f V\n", voltage);
-                                #endif
-                                read_success = false;
+                                if (voltage < 10.0 || voltage > 25.0) valid_reading = false;
+                                if (current < 0.0 || current > 10.0) valid_reading = false;
                         }
-                        if (current < 0.0 || current > 20.0)  /* Reasonable current range */
+                        else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
+                        {
+                                if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
+                                if (current < 0.0 || current > 20.0) valid_reading = false;
+                        }
+                        else if (strstr(handle->sensor_names[i], "VDD_SOC"))
+                        {
+                                if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
+                                if (current < 0.0 || current > 10.0) valid_reading = false;
+                        }
+                        else if (strstr(handle->sensor_names[i], "VDD_DDR"))
+                        {
+                                if (voltage < 1.0 || voltage > 2.0) valid_reading = false;
+                                if (current < 0.0 || current > 5.0) valid_reading = false;
+                        }
+                        else if (strstr(handle->sensor_names[i], "VDD_5V0"))
+                        {
+                                if (voltage < 4.5 || voltage > 5.5) valid_reading = false;
+                                if (current < 0.0 || current > 2.0) valid_reading = false;
+                        }
+                        else if (strstr(handle->sensor_names[i], "VDD_3V3"))
+                        {
+                                if (voltage < 3.0 || voltage > 3.6) valid_reading = false;
+                                if (current < 0.0 || current > 2.0) valid_reading = false;
+                        }
+                        else if (strstr(handle->sensor_names[i], "VDD_1V8"))
+                        {
+                                if (voltage < 1.6 || voltage > 2.0) valid_reading = false;
+                                if (current < 0.0 || current > 2.0) valid_reading = false;
+                        }
+
+                        if (!valid_reading)
                         {
                                 #ifdef SHOW_ALL_DEBUG
-                                printf("  Invalid current reading: %.3f A\n", current);
+                                printf("  Invalid reading for %s: %.3f V, %.3f A\n", 
+                                       handle->sensor_names[i], voltage, current);
                                 #endif
                                 read_success = false;
                         }
@@ -1200,9 +1235,27 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         read_success ? "Normal" : "Error", 
                         sizeof(handle->latest_data.sensors[i].status) - 1);
 
-                /* Set thresholds based on typical values */
-                handle->latest_data.sensors[i].warning_threshold = 10.0;
-                handle->latest_data.sensors[i].critical_threshold = 15.0;
+                /* Set thresholds based on sensor type */
+                if (strstr(handle->sensor_names[i], "VDD_IN"))
+                {
+                        handle->latest_data.sensors[i].warning_threshold = 15.0;
+                        handle->latest_data.sensors[i].critical_threshold = 20.0;
+                }
+                else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
+                {
+                        handle->latest_data.sensors[i].warning_threshold = 10.0;
+                        handle->latest_data.sensors[i].critical_threshold = 15.0;
+                }
+                else if (strstr(handle->sensor_names[i], "VDD_SOC"))
+                {
+                        handle->latest_data.sensors[i].warning_threshold = 5.0;
+                        handle->latest_data.sensors[i].critical_threshold = 8.0;
+                }
+                else
+                {
+                        handle->latest_data.sensors[i].warning_threshold = 3.0;
+                        handle->latest_data.sensors[i].critical_threshold = 5.0;
+                }
         }
 
         /* Calculate total power */
