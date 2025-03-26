@@ -165,15 +165,22 @@ fn test_statistics() {
 fn test_sensor_info() {
     println!("\n=== Running test_sensor_info ===");
     let monitor = PowerMonitor::new().unwrap();
+    println!("PowerMonitor created successfully");
     
     // Get sensor count
     let count = monitor.get_sensor_count().unwrap();
+    println!("Sensor count: {}", count);
     assert!(count >= 0);
     
     // Get sensor names
+    println!("Getting sensor names...");
     let names = monitor.get_sensor_names().unwrap();
+    println!("Got {} sensor names", names.len());
     assert_eq!(names.len(), count as usize);
-    for name in names {
+    
+    println!("Verifying sensor names:");
+    for (i, name) in names.iter().enumerate() {
+        println!("Sensor {}: {}", i, name);
         assert!(!name.is_empty());
     }
 }

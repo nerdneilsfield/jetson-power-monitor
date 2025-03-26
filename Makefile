@@ -11,7 +11,6 @@ build: ## Build the project
 install: ## Install the project
 	cmake --install build
 
-
 .PHONY: clean
 clean: ## Clean the project
 	rm -rf build
