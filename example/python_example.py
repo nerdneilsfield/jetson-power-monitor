@@ -9,7 +9,7 @@ def cpu_intensive_task():
     """模拟一个CPU密集型任务"""
     print("开始执行CPU密集型任务...")
     # 创建一个大型矩阵并进行矩阵运算
-    size = 1000
+    size = 10000
     matrix1 = np.random.rand(size, size)
     matrix2 = np.random.rand(size, size)
     

@@ -20,3 +20,15 @@ BUILD_PYTHON_BINDINGS = "ON"
 BUILD_TESTS = "OFF"
 BUILD_CLI = "ON"
 SKBUILD="ON"
+
+# cibuildwheel specific configuration
+[tool.cibuildwheel]
+# Dependencies to install before building
+before-build = "pip install pybind11 scikit-build-core"
+# Test command - if testing is desired
+test-command = "python -c \"import jetpwmon; print(dir(jetpwmon))\""
+# Skip tests - may be slow on emulators
+test-skip = "*"
+# System packages that may be needed in manylinux containers
+manylinux-x86_64-image = "manylinux2014"
+manylinux-aarch64-image = "manylinux2014"

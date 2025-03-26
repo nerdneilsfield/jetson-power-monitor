@@ -91,5 +91,47 @@ if(BUILD_EXAMPLES)
     endif()
 endif()
 
+# CPack 配置部分 - 放在 CMakeLists.txt 末尾
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "libjetpwmon")
+set(CPACK_PACKAGE_VENDOR "Qi Deng")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A simple power monitor for Jetson")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_CONTACT "dengqi935@gmail.com")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.17)")
+set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
 
+# 创建开发包配置
+set(CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Libraries")
+set(CPACK_COMPONENT_HEADERS_DISPLAY_NAME "C/C++ Development Files")
+set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "Applications")
+
+# 设置组件
+set(CPACK_COMPONENTS_ALL libraries headers applications)
+set(CPACK_DEB_COMPONENT_INSTALL ON)
+
+# 将安装目标关联到组件
+set_target_properties(jetpwmon PROPERTIES COMPONENT libraries)
+set_target_properties(jetpwmon_static PROPERTIES COMPONENT libraries)
+
+if(BUILD_CPP_BINDINGS)
+  set_target_properties(jetpwmon_cpp PROPERTIES COMPONENT libraries)
+  set_target_properties(jetpwmon_static_cpp PROPERTIES COMPONENT libraries)
+endif()
+
+if(BUILD_CLI)
+  set_target_properties(jetpwmon_cli PROPERTIES COMPONENT applications)
+endif()
+
+# 头文件归入开发包
+install(DIRECTORY include/jetpwmon DESTINATION include
+        COMPONENT headers)
+
+# 配置开发包
+set(CPACK_DEBIAN_HEADERS_PACKAGE_NAME "libjetpwmon-dev")
+set(CPACK_DEBIAN_HEADERS_PACKAGE_DEPENDS "libjetpwmon (= ${PROJECT_VERSION})")
+
+# 包含 CPack 模块
+include(CPack)
 

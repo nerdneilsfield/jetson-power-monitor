@@ -1002,32 +1002,86 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
         /* Update the time */
         clock_gettime(CLOCK_REALTIME, &handle->last_sample_time);
 
-        /* For real implementation, this would read from actual sensor files */
-        /* For this example, generate realistic sample data */
+        /* Read data from each sensor */
         for (int i = 0; i < handle->sensor_count; i++)
         {
-                double base_voltage, base_current, noise;
+                char volt_path[512], curr_path[512];
+                FILE *fp;
+                double voltage = 0.0, current = 0.0;
+                bool read_success = true;
 
-                /* Simulate different characteristics for different sensor types */
+                /* Construct paths based on sensor type */
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
                 {
-                        base_voltage = 3.3;
-                        base_current = 0.5;
-                        noise = 0.05;
+                        /* For JP5 or above (hwmon format) */
+                        if (strstr(handle->sensor_paths[i], "hwmon"))
+                        {
+                                snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", 
+                                        handle->sensor_paths[i], i);
+                                snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", 
+                                        handle->sensor_paths[i], i);
+                        }
+                        /* For JP4 or below (iio format) */
+                        else
+                        {
+                                snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", 
+                                        handle->sensor_paths[i], i);
+                                snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", 
+                                        handle->sensor_paths[i], i);
+                        }
+                }
+                else /* PM_SENSOR_TYPE_SYSTEM */
+                {
+                        snprintf(volt_path, sizeof(volt_path), "%s/voltage_now", 
+                                handle->sensor_paths[i]);
+                        snprintf(curr_path, sizeof(curr_path), "%s/current_now", 
+                                handle->sensor_paths[i]);
+                }
+
+                /* Read voltage */
+                fp = fopen(volt_path, "r");
+                if (fp)
+                {
+                        if (fscanf(fp, "%lf", &voltage) != 1)
+                        {
+                                read_success = false;
+                        }
+                        fclose(fp);
                 }
                 else
                 {
-                        base_voltage = 5.0;
-                        base_current = 1.0;
-                        noise = 0.1;
+                        read_success = false;
                 }
 
-                /* Add some noise to make it look more realistic */
-                handle->latest_data.sensors[i].voltage = base_voltage + ((double)rand() / RAND_MAX - 0.5) * noise;
-                handle->latest_data.sensors[i].current = base_current + ((double)rand() / RAND_MAX - 0.5) * noise;
-                handle->latest_data.sensors[i].power = handle->latest_data.sensors[i].voltage * handle->latest_data.sensors[i].current;
-                handle->latest_data.sensors[i].online = true;
-                strncpy(handle->latest_data.sensors[i].status, "Normal", sizeof(handle->latest_data.sensors[i].status) - 1);
+                /* Read current */
+                fp = fopen(curr_path, "r");
+                if (fp)
+                {
+                        if (fscanf(fp, "%lf", &current) != 1)
+                        {
+                                read_success = false;
+                        }
+                        fclose(fp);
+                }
+                else
+                {
+                        read_success = false;
+                }
+
+                /* Convert units if needed (some sensors report in microvolts/microamps) */
+                if (voltage > 1000.0) voltage /= 1000000.0;  /* Convert μV to V */
+                if (current > 1000.0) current /= 1000000.0;  /* Convert μA to A */
+
+                /* Update sensor data */
+                handle->latest_data.sensors[i].voltage = voltage;
+                handle->latest_data.sensors[i].current = current;
+                handle->latest_data.sensors[i].power = voltage * current;
+                handle->latest_data.sensors[i].online = read_success;
+                strncpy(handle->latest_data.sensors[i].status, 
+                        read_success ? "Normal" : "Error", 
+                        sizeof(handle->latest_data.sensors[i].status) - 1);
+
+                /* Set thresholds based on typical values */
                 handle->latest_data.sensors[i].warning_threshold = 10.0;
                 handle->latest_data.sensors[i].critical_threshold = 15.0;
         }
