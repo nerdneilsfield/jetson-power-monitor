@@ -356,10 +356,17 @@ impl PowerMonitor {
         if result != 0 {
             return Err(result.into());
         }
-        Ok(names
-            .into_iter()
-            .map(|ptr| unsafe { CString::from_raw(ptr as *mut _).into_string().unwrap() })
-            .collect())
+        
+        let mut result = Vec::with_capacity(count as usize);
+        for ptr in names.into_iter().take(count as usize) {
+            if !ptr.is_null() {
+                unsafe {
+                    let cstr = CString::from_raw(ptr as *mut i8);
+                    result.push(cstr.into_string().unwrap());
+                }
+            }
+        }
+        Ok(result)
     }
 }
 

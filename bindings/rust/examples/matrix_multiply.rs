@@ -5,7 +5,7 @@ use ndarray::{Array2, s};
 use ndarray::linalg::Dot;
 use rand::Rng;
 
-const MATRIX_SIZE: usize = 5000;
+const MATRIX_SIZE: usize = 1000;
 const NUM_THREADS: usize = 4;
 const NUM_ITERATIONS: usize = 10;
 
