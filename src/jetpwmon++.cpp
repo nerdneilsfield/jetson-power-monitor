@@ -105,7 +105,7 @@ PowerMonitor::PowerMonitor() : handle_(nullptr) {
     if (error != PM_SUCCESS) {
         throw std::runtime_error(pm_error_string(error));
     }
-    handle_.reset(&handle);
+    handle_.reset(new pm_handle_t(handle));
 }
 
 PowerMonitor::~PowerMonitor() = default;
