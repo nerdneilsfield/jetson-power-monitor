@@ -957,16 +957,34 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
                                         if (strstr(path, "hwmon"))
                                         {
                                                 /* Try hwmon format first */
-                                                snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", path, port_number);
-                                                snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", path, port_number);
+                                                snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", 
+                                                        path, port_number);
+                                                snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", 
+                                                        path, port_number);
+
+                                                #ifdef SHOW_ALL_DEBUG
+                                                printf("  Trying hwmon format:\n");
+                                                printf("    Voltage path: %s\n", volt_path);
+                                                printf("    Current path: %s\n", curr_path);
+                                                #endif
+
                                                 has_volt = check_file_exists(volt_path);
                                                 has_curr = check_file_exists(curr_path);
 
-                                                /* If not found, try alternative hwmon format */
+                                                /* If files don't exist, try alternative hwmon format */
                                                 if (!has_volt || !has_curr)
                                                 {
-                                                        snprintf(volt_path, sizeof(volt_path), "%s/voltage%d_input", path, port_number);
-                                                        snprintf(curr_path, sizeof(curr_path), "%s/current%d_input", path, port_number);
+                                                        snprintf(volt_path, sizeof(volt_path), "%s/voltage%d_input", 
+                                                                path, port_number);
+                                                        snprintf(curr_path, sizeof(curr_path), "%s/current%d_input", 
+                                                                path, port_number);
+
+                                                        #ifdef SHOW_ALL_DEBUG
+                                                        printf("  Trying alternative hwmon format:\n");
+                                                        printf("    Voltage path: %s\n", volt_path);
+                                                        printf("    Current path: %s\n", curr_path);
+                                                        #endif
+
                                                         has_volt = check_file_exists(volt_path);
                                                         has_curr = check_file_exists(curr_path);
                                                 }
@@ -974,8 +992,17 @@ static pm_error_t list_all_i2c_ports(pm_handle_t handle, const char *path)
                                         else
                                         {
                                                 /* Try iio format */
-                                                snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", path, port_number);
-                                                snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", path, port_number);
+                                                snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", 
+                                                        path, port_number);
+                                                snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", 
+                                                        path, port_number);
+
+                                                #ifdef SHOW_ALL_DEBUG
+                                                printf("  Trying iio format:\n");
+                                                printf("    Voltage path: %s\n", volt_path);
+                                                printf("    Current path: %s\n", curr_path);
+                                                #endif
+
                                                 has_volt = check_file_exists(volt_path);
                                                 has_curr = check_file_exists(curr_path);
                                         }
@@ -1073,6 +1100,12 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                                 snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", 
                                         handle->sensor_paths[i], port_number);
 
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Trying hwmon format:\n");
+                                printf("    Voltage path: %s\n", volt_path);
+                                printf("    Current path: %s\n", curr_path);
+                                #endif
+
                                 /* If files don't exist, try alternative hwmon format */
                                 if (!check_file_exists(volt_path) || !check_file_exists(curr_path))
                                 {
@@ -1080,6 +1113,12 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                                                 handle->sensor_paths[i], port_number);
                                         snprintf(curr_path, sizeof(curr_path), "%s/current%d_input", 
                                                 handle->sensor_paths[i], port_number);
+
+                                        #ifdef SHOW_ALL_DEBUG
+                                        printf("  Trying alternative hwmon format:\n");
+                                        printf("    Voltage path: %s\n", volt_path);
+                                        printf("    Current path: %s\n", curr_path);
+                                        #endif
                                 }
                         }
                         else
@@ -1089,13 +1128,13 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                                         handle->sensor_paths[i], port_number);
                                 snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", 
                                         handle->sensor_paths[i], port_number);
-                        }
 
-                        #ifdef SHOW_ALL_DEBUG
-                        printf("Reading sensor %s (port %d):\n", handle->sensor_names[i], port_number);
-                        printf("  Voltage path: %s\n", volt_path);
-                        printf("  Current path: %s\n", curr_path);
-                        #endif
+                                #ifdef SHOW_ALL_DEBUG
+                                printf("  Trying iio format:\n");
+                                printf("    Voltage path: %s\n", volt_path);
+                                printf("    Current path: %s\n", curr_path);
+                                #endif
+                        }
                 }
                 else /* PM_SENSOR_TYPE_SYSTEM */
                 {
@@ -1174,38 +1213,23 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         bool valid_reading = true;
                         if (strstr(handle->sensor_names[i], "VDD_IN"))
                         {
-                                if (voltage < 10.0 || voltage > 25.0) valid_reading = false;
-                                if (current < 0.0 || current > 10.0) valid_reading = false;
+                                /* VDD_IN 是系统 5V 电源轨 */
+                                if (voltage < 4.5 || voltage > 5.5) valid_reading = false;
+                                if (current < 0.0 || current > 5.0) valid_reading = false;
                         }
                         else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
                         {
+                                /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
+                                /* 电压应该在 0.5-1.5V 范围内 */
                                 if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
                                 if (current < 0.0 || current > 20.0) valid_reading = false;
                         }
                         else if (strstr(handle->sensor_names[i], "VDD_SOC"))
                         {
+                                /* VDD_SOC 是 SoC 电源轨 */
+                                /* 电压应该在 0.5-1.5V 范围内 */
                                 if (voltage < 0.5 || voltage > 1.5) valid_reading = false;
                                 if (current < 0.0 || current > 10.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_DDR"))
-                        {
-                                if (voltage < 1.0 || voltage > 2.0) valid_reading = false;
-                                if (current < 0.0 || current > 5.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_5V0"))
-                        {
-                                if (voltage < 4.5 || voltage > 5.5) valid_reading = false;
-                                if (current < 0.0 || current > 2.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_3V3"))
-                        {
-                                if (voltage < 3.0 || voltage > 3.6) valid_reading = false;
-                                if (current < 0.0 || current > 2.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_1V8"))
-                        {
-                                if (voltage < 1.6 || voltage > 2.0) valid_reading = false;
-                                if (current < 0.0 || current > 2.0) valid_reading = false;
                         }
 
                         if (!valid_reading)
