@@ -14,7 +14,7 @@ jobs:
       matrix:
         os: [ubuntu-20.04]
         arch: [aarch64]
-        python: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.14]
+        python: [3.8, 3.9, "3.10", 3.11, 3.12]
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +30,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10" # Controls the Python version for running cibuildwheel
+          python-version: "3.11" # Controls the Python version for running cibuildwheel
 
       - name: Install cibuildwheel
         run: |
@@ -41,12 +41,11 @@ jobs:
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
-          CIBW_BUILD: cp${{ matrix.python == '3.10' && '310' || matrix.python == '3.11' && '311' || matrix.python == '3.12' && '312' || matrix.python == '3.13' && '313' || matrix.python == '3.14' && '314' || matrix.python == '3.8' && '38' || matrix.python == '3.9' && '39' }}-*
+          CIBW_BUILD: cp${{ matrix.python == '3.10' && '310' || matrix.python == '3.11' && '311' || matrix.python == '3.12' && '312' || matrix.python == '3.8' && '38' || matrix.python == '3.9' && '39' }}-*
           CIBW_SKIP: "*-musllinux*" # Skips musllinux, only builds manylinux
-          # If you want to skip tests (if tests run too slow in ARM emulators)
-          CIBW_TEST_SKIP: "*"
-          # Pre-installs dependencies
+          CIBW_TEST_SKIP: "*" # Skip tests for faster builds
           CIBW_BEFORE_BUILD: pip install pybind11 scikit-build-core
+          CIBW_ENVIRONMENT: "CIBW_BUILD=cp${{ matrix.python == '3.10' && '310' || matrix.python == '3.11' && '311' || matrix.python == '3.12' && '312' || matrix.python == '3.8' && '38' || matrix.python == '3.9' && '39' }}-*"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
