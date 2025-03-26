@@ -1,7 +1,8 @@
 use jetpwmon::PowerMonitor;
 use std::thread;
 use std::time::Duration;
-use std::sync::Arc;
+use ndarray::{Array2, s};
+use ndarray::linalg::Dot;
 use rand::Rng;
 
 const MATRIX_SIZE: usize = 5000;
@@ -12,30 +13,23 @@ fn matrix_multiply_thread(thread_id: usize) {
     println!("线程 {} 开始执行...", thread_id);
 
     // 使用 ndarray 进行矩阵乘法
-    #[cfg(test)]
-    {
-        use ndarray::{Array2, s};
-        use ndarray::linalg::Dot;
-
-        // 创建随机矩阵
-        let mut rng = rand::thread_rng();
-        let mut a = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
-        let mut b = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
-        
-        // 填充随机值
-        for i in 0..MATRIX_SIZE {
-            for j in 0..MATRIX_SIZE {
-                a[[i, j]] = rng.gen_range(-1.0..1.0);
-                b[[i, j]] = rng.gen_range(-1.0..1.0);
-            }
+    let mut rng = rand::thread_rng();
+    let mut a = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
+    let mut b = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
+    
+    // 填充随机值
+    for i in 0..MATRIX_SIZE {
+        for j in 0..MATRIX_SIZE {
+            a[[i, j]] = rng.gen_range(-1.0..1.0);
+            b[[i, j]] = rng.gen_range(-1.0..1.0);
         }
+    }
 
-        // 执行多次矩阵乘法
-        let mut c = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
-        for _ in 0..NUM_ITERATIONS {
-            c = a.dot(&b);
-            a = c.clone();
-        }
+    // 执行多次矩阵乘法
+    let mut c = Array2::zeros((MATRIX_SIZE, MATRIX_SIZE));
+    for _ in 0..NUM_ITERATIONS {
+        c = a.dot(&b);
+        a = c.clone();
     }
 
     println!("线程 {} 完成执行", thread_id);

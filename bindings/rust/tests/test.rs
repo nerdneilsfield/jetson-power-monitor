@@ -5,6 +5,7 @@ use std::time::Duration;
 /// Test initialization of PowerMonitor
 #[test]
 fn test_init() {
+    println!("\n=== Running test_init ===");
     let monitor = PowerMonitor::new().unwrap();
     assert!(monitor.get_sensor_count().unwrap() >= 0);
 }
@@ -12,6 +13,7 @@ fn test_init() {
 /// Test setting and getting sampling frequency
 #[test]
 fn test_sampling_frequency() {
+    println!("\n=== Running test_sampling_frequency ===");
     let monitor = PowerMonitor::new().unwrap();
     
     // Test setting sampling frequency
@@ -32,6 +34,7 @@ fn test_sampling_frequency() {
 /// Test starting and stopping sampling
 #[test]
 fn test_sampling_control() {
+    println!("\n=== Running test_sampling_control ===");
     let monitor = PowerMonitor::new().unwrap();
     
     // Test starting sampling
@@ -58,6 +61,7 @@ fn test_sampling_control() {
 /// Test data collection functionality
 #[test]
 fn test_data_collection() {
+    println!("\n=== Running test_data_collection ===");
     let monitor = PowerMonitor::new().unwrap();
     
     // Set sampling frequency and start sampling
@@ -100,6 +104,7 @@ fn test_data_collection() {
 /// Test statistics collection
 #[test]
 fn test_statistics() {
+    println!("\n=== Running test_statistics ===");
     let monitor = PowerMonitor::new().unwrap();
     
     // Reset statistics
@@ -124,14 +129,19 @@ fn test_statistics() {
     
     // Verify sensor statistics
     let sensor_count = monitor.get_sensor_count().unwrap();
-    if sensor_count > 0 {
-        let sensor = unsafe { &*stats.sensors };
-        assert!(!String::from_utf8_lossy(&sensor.name).trim_matches('\0').is_empty());
-        assert!(sensor.power.min >= 0.0);
-        assert!(sensor.power.max >= 0.0);
-        assert!(sensor.power.avg >= 0.0);
-        assert!(sensor.power.total >= 0.0);
-        assert!(sensor.power.count > 0);
+    assert!(sensor_count >= 0);
+    assert_eq!(stats.sensor_count, sensor_count);
+    
+    if sensor_count > 0 && !stats.sensors.is_null() {
+        let sensors = unsafe { std::slice::from_raw_parts(stats.sensors, sensor_count as usize) };
+        for sensor in sensors {
+            assert!(!String::from_utf8_lossy(&sensor.name).trim_matches('\0').is_empty());
+            assert!(sensor.power.min >= 0.0);
+            assert!(sensor.power.max >= 0.0);
+            assert!(sensor.power.avg >= 0.0);
+            assert!(sensor.power.total >= 0.0);
+            assert!(sensor.power.count > 0);
+        }
     }
     
     monitor.stop_sampling().unwrap();
@@ -140,6 +150,7 @@ fn test_statistics() {
 /// Test sensor information retrieval
 #[test]
 fn test_sensor_info() {
+    println!("\n=== Running test_sensor_info ===");
     let monitor = PowerMonitor::new().unwrap();
     
     // Get sensor count
@@ -157,6 +168,7 @@ fn test_sensor_info() {
 /// Test error code values
 #[test]
 fn test_error_codes() {
+    println!("\n=== Running test_error_codes ===");
     assert_eq!(i32::from(Error::InitFailed), -1);
     assert_eq!(i32::from(Error::NotInitialized), -2);
     assert_eq!(i32::from(Error::AlreadyRunning), -3);
@@ -171,6 +183,7 @@ fn test_error_codes() {
 /// Test sensor type values
 #[test]
 fn test_sensor_types() {
+    println!("\n=== Running test_sensor_types ===");
     assert_eq!(SensorType::Unknown as u32, 0);
     assert_eq!(SensorType::I2C as u32, 1);
     assert_eq!(SensorType::System as u32, 2);
