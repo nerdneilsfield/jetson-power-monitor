@@ -1009,6 +1009,16 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 FILE *fp;
                 double voltage = 0.0, current = 0.0;
                 bool read_success = true;
+                int port_number = -1;
+
+                /* Get port number from sensor name */
+                if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
+                {
+                        char *name = handle->sensor_names[i];
+                        if (strstr(name, "VDD_IN")) port_number = 0;
+                        else if (strstr(name, "VDD_CPU_GPU_CV")) port_number = 1;
+                        else if (strstr(name, "VDD_SOC")) port_number = 2;
+                }
 
                 /* Construct paths based on sensor type */
                 if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
@@ -1017,18 +1027,23 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         if (strstr(handle->sensor_paths[i], "hwmon"))
                         {
                                 snprintf(volt_path, sizeof(volt_path), "%s/in%d_input", 
-                                        handle->sensor_paths[i], i);
+                                        handle->sensor_paths[i], port_number);
                                 snprintf(curr_path, sizeof(curr_path), "%s/curr%d_input", 
-                                        handle->sensor_paths[i], i);
+                                        handle->sensor_paths[i], port_number);
                         }
                         /* For JP4 or below (iio format) */
                         else
                         {
                                 snprintf(volt_path, sizeof(volt_path), "%s/in_voltage%d_input", 
-                                        handle->sensor_paths[i], i);
+                                        handle->sensor_paths[i], port_number);
                                 snprintf(curr_path, sizeof(curr_path), "%s/in_current%d_input", 
-                                        handle->sensor_paths[i], i);
+                                        handle->sensor_paths[i], port_number);
                         }
+
+                        /* Debug output */
+                        printf("Sensor %s (port %d):\n", handle->sensor_names[i], port_number);
+                        printf("  Voltage path: %s\n", volt_path);
+                        printf("  Current path: %s\n", curr_path);
                 }
                 else /* PM_SENSOR_TYPE_SYSTEM */
                 {
@@ -1045,12 +1060,18 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         if (fscanf(fp, "%lf", &voltage) != 1)
                         {
                                 read_success = false;
+                                printf("  Failed to read voltage from %s\n", volt_path);
+                        }
+                        else
+                        {
+                                printf("  Raw voltage: %lf\n", voltage);
                         }
                         fclose(fp);
                 }
                 else
                 {
                         read_success = false;
+                        printf("  Cannot open voltage file: %s\n", volt_path);
                 }
 
                 /* Read current */
@@ -1060,17 +1081,25 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         if (fscanf(fp, "%lf", &current) != 1)
                         {
                                 read_success = false;
+                                printf("  Failed to read current from %s\n", curr_path);
+                        }
+                        else
+                        {
+                                printf("  Raw current: %lf\n", current);
                         }
                         fclose(fp);
                 }
                 else
                 {
                         read_success = false;
+                        printf("  Cannot open current file: %s\n", curr_path);
                 }
 
                 /* Convert units if needed (some sensors report in microvolts/microamps) */
                 if (voltage > 1000.0) voltage /= 1000000.0;  /* Convert μV to V */
                 if (current > 1000.0) current /= 1000000.0;  /* Convert μA to A */
+
+                printf("  Converted values: %.3f V, %.3f A\n", voltage, current);
 
                 /* Update sensor data */
                 handle->latest_data.sensors[i].voltage = voltage;

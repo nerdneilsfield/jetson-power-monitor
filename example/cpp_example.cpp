@@ -10,6 +10,7 @@
 #include <chrono>
 #include <functional>
 #include <thread>
+#include <omp.h>
 
 /**
  * @brief CPU-intensive task: Matrix multiplication
@@ -29,18 +30,21 @@ void cpuIntensiveTask() {
     std::vector<double> result(size * size);
     
     // Initialize matrices
+    #pragma omp parallel for
     for (int i = 0; i < size * size; i++) {
         matrix1[i] = dis(gen);
         matrix2[i] = dis(gen);
     }
     
     // Perform matrix multiplication
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
-            result[i * size + j] = 0.0;
+            double sum = 0.0;
             for (int k = 0; k < size; k++) {
-                result[i * size + j] += matrix1[i * size + k] * matrix2[k * size + j];
+                sum += matrix1[i * size + k] * matrix2[k * size + j];
             }
+            result[i * size + j] = sum;
         }
     }
     

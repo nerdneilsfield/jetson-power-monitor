@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <omp.h>
 #include "jetpwmon/jetpwmon.h"
 
 void cpu_intensive_task() {
@@ -14,18 +15,21 @@ void cpu_intensive_task() {
     double *result = malloc(size * size * sizeof(double));
     
     // 初始化矩阵
+    #pragma omp parallel for
     for (int i = 0; i < size * size; i++) {
         matrix1[i] = (double)rand() / RAND_MAX;
         matrix2[i] = (double)rand() / RAND_MAX;
     }
     
     // 执行矩阵乘法
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
-            result[i * size + j] = 0.0;
+            double sum = 0.0;
             for (int k = 0; k < size; k++) {
-                result[i * size + j] += matrix1[i * size + k] * matrix2[k * size + j];
+                sum += matrix1[i * size + k] * matrix2[k * size + j];
             }
+            result[i * size + j] = sum;
         }
     }
     
