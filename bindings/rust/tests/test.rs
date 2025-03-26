@@ -82,12 +82,25 @@ fn test_data_collection() {
     
     // Verify sensor data
     let sensor_count = monitor.get_sensor_count().unwrap();
+    println!("Sensor count: {}", sensor_count);
     assert!(sensor_count >= 0);
     assert_eq!(data.sensor_count, sensor_count);
     
-    if sensor_count > 0 && !data.sensors.is_null() {
+    // 添加更多的调试信息
+    println!("Data sensor count: {}", data.sensor_count);
+    println!("Data sensors pointer: {:?}", data.sensors);
+    
+    if sensor_count > 0 {
+        if data.sensors.is_null() {
+            println!("Warning: sensors pointer is null");
+            return;
+        }
+        
         let sensors = unsafe { std::slice::from_raw_parts(data.sensors, sensor_count as usize) };
-        for sensor in sensors {
+        println!("Got {} sensors from slice", sensors.len());
+        
+        for (i, sensor) in sensors.iter().enumerate() {
+            println!("Processing sensor {}: {}", i, String::from_utf8_lossy(&sensor.name).trim_matches('\0'));
             assert!(!String::from_utf8_lossy(&sensor.name).trim_matches('\0').is_empty());
             assert!(sensor.power >= 0.0);
             assert!(sensor.current >= 0.0);
