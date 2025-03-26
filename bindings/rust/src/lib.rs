@@ -361,7 +361,7 @@ impl PowerMonitor {
         for ptr in names.into_iter().take(count as usize) {
             if !ptr.is_null() {
                 unsafe {
-                    let cstr = CString::from_raw(ptr as *mut i8);
+                    let cstr = CString::from_raw(ptr as *mut _);
                     result.push(cstr.into_string().unwrap());
                 }
             }
