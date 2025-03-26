@@ -345,6 +345,12 @@ impl PowerMonitor {
     pub fn get_sensor_names(&self) -> Result<Vec<String>, Error> {
         let count = self.get_sensor_count()?;
         let mut names = vec![std::ptr::null_mut(); count as usize];
+        
+        // 为每个字符串分配内存
+        for i in 0..count as usize {
+            names[i] = unsafe { std::alloc::alloc(std::alloc::Layout::array::<u8>(64).unwrap()) as *mut i8 };
+        }
+        
         let mut count = count;
         let result = unsafe {
             pm_get_sensor_names(
@@ -353,7 +359,14 @@ impl PowerMonitor {
                 &mut count,
             )
         };
+        
         if result != 0 {
+            // 清理内存
+            for ptr in names.iter() {
+                if !ptr.is_null() {
+                    unsafe { std::alloc::dealloc(*ptr as *mut u8, std::alloc::Layout::array::<u8>(64).unwrap()) };
+                }
+            }
             return Err(result.into());
         }
         
@@ -361,7 +374,7 @@ impl PowerMonitor {
         for ptr in names.into_iter().take(count as usize) {
             if !ptr.is_null() {
                 unsafe {
-                    let cstr = CString::from_raw(ptr as *mut _);
+                    let cstr = CString::from_raw(ptr);
                     result.push(cstr.into_string().unwrap());
                 }
             }
