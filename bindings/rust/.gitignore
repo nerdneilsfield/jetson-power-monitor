@@ -1,0 +1,23 @@
+# Cargo build artifacts
+target/
+
+# Cargo test results
+*.log
+*.xml
+*.txt
+
+# rustc 
+*.rs.bk
+*.rs.bk2
+*.rs.bk3
+*.rs.bk4
+*.rs.bk5
+*.rs.bk6
+
+# Cargo build logs
+*.build
+*.build.log
+*.build.log.gz
+*.build.log.bz2
+*.build.log.xz
+*.build.log.zst

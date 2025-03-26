@@ -1,0 +1,17 @@
+[package]
+name = "jetpwmon"
+version = "0.1.0"
+edition = "2021"
+authors = ["Qi Deng <dengqi935@gmail.com>"]
+description = "Rust bindings for Jetson Power Monitor"
+license = "BSD-3-Clause"
+
+[dependencies]
+libc = "0.2"
+rand = "0.9.0"
+
+[build-dependencies]
+cc = "1.0"
+
+[lib]
+crate-type = ["rlib"]
