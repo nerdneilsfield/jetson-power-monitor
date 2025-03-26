@@ -10,7 +10,7 @@ using namespace Eigen;
 using namespace std;
 
 /* 减小矩阵大小，避免内存问题 */
-constexpr int MATRIX_SIZE = 1000;
+constexpr int MATRIX_SIZE = 5000;
 constexpr int NUM_THREADS = 4;
 constexpr int NUM_ITERATIONS = 10;
 
