@@ -1082,10 +1082,6 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         if (strstr(name, "VDD_IN")) port_number = 1;
                         else if (strstr(name, "VDD_CPU_GPU_CV")) port_number = 2;
                         else if (strstr(name, "VDD_SOC")) port_number = 3;
-                        else if (strstr(name, "VDD_DDR")) port_number = 4;
-                        else if (strstr(name, "VDD_5V0")) port_number = 5;
-                        else if (strstr(name, "VDD_3V3")) port_number = 6;
-                        else if (strstr(name, "VDD_1V8")) port_number = 7;
                 }
 
                 /* Construct paths based on sensor type */
@@ -1213,9 +1209,9 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                         bool valid_reading = true;
                         if (strstr(handle->sensor_names[i], "VDD_IN"))
                         {
-                                /* VDD_IN 是系统 5V 电源轨 */
+                                /* VDD_IN 是系统总功耗,电压应该是 5V */
                                 if (voltage < 4.5 || voltage > 5.5) valid_reading = false;
-                                if (current < 0.0 || current > 5.0) valid_reading = false;
+                                if (current < 0.0 || current > 10.0) valid_reading = false;
                         }
                         else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
                         {
