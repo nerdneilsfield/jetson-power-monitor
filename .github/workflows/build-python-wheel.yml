@@ -1,0 +1,104 @@
+name: Build ARM wheels
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }} for ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04]
+        arch: [aarch64]
+        python: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.14]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches the full code history for version number determination
+
+      - name: Set up QEMU
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10" # Controls the Python version for running cibuildwheel
+
+      - name: Install cibuildwheel
+        run: |
+          python -m pip install cibuildwheel==2.23.2
+
+      - name: Build wheels
+        run: |
+          python -m cibuildwheel --output-dir wheelhouse
+        env:
+          CIBW_ARCHS_LINUX: ${{ matrix.arch }}
+          CIBW_BUILD: cp${{ matrix.python/.//''}}-*
+          CIBW_SKIP: "*-musllinux*" # Skips musllinux, only builds manylinux
+          # If you want to skip tests (if tests run too slow in ARM emulators)
+          CIBW_TEST_SKIP: "*"
+          # Pre-installs dependencies
+          CIBW_BEFORE_BUILD: pip install pybind11 scikit-build-core
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.arch }}-${{ matrix.python }}
+          path: ./wheelhouse/*.whl
+          if-no-files-found: error
+
+  # If it's a release tag, uploads the packages to GitHub Releases
+  release_packages:
+    name: Release Ubuntu Packages
+    needs: build_wheels
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      # Directly uses the previously built wheel files, no need to download again
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: wheels-*
+          merge-multiple: false
+
+      - name: Prepare packages for release
+        run: |
+          mkdir -p release_packages
+          find artifacts -name "*.whl" -exec cp {} release_packages/ \;
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_packages/*.whl
+
+    # 发布到 PyPI
+  publish_pypi:
+    name: Publish to PyPI
+    needs: build_wheels
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/jetpwmon
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: wheels-*
+          merge-multiple: true
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

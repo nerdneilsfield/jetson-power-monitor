@@ -1,0 +1,114 @@
+name: Build Ubuntu Packages
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  build_deb_packages:
+    name: Build DEB packages on ${{ matrix.ubuntu }}
+    runs-on: ${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+        arch: [arm64]
+        # Exclude unsupported combinations
+        # exclude:
+        #   # If there are combinations that need to be excluded, you can add them here
+        #   - ubuntu: ubuntu-20.04
+        #     arch: arm64  # For example: suppose 20.04 does not build arm64 version
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full clone to get version information
+
+      # Set up QEMU for cross-compilation
+      - name: Set up QEMU
+        if: matrix.arch == 'arm64'
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      # Install necessary build dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config
+
+      # Configure cross-compilation environment (if necessary)
+      - name: Setup cross-compilation
+        if: matrix.arch == 'arm64' && runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          echo "CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/.github/toolchain-arm64.cmake" >> $GITHUB_ENV
+
+      # Build and package
+      - name: Configure CMake
+        run: |
+          mkdir -p build
+          cd build
+          cmake ${{ env.CMAKE_ARGS }} \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DBUILD_PYTHON_BINDINGS=OFF \
+                -DBUILD_CPP_BINDINGS=ON \
+                -DBUILD_CLI=ON \
+                -DBUILD_TESTS=OFF \
+                -DBUILD_EXAMPLES=OFF \
+                ..
+
+      - name: Build
+        run: |
+          cd build
+          make -j$(nproc)
+
+      - name: Package
+        run: |
+          cd build
+          cpack -G DEB
+
+      # Rename packages to include Ubuntu version and architecture information
+      - name: Rename packages
+        run: |
+          cd build
+          ubuntu_version=$(echo ${{ matrix.ubuntu }} | sed 's/ubuntu-//')
+          for pkg in *.deb; do
+            new_name=$(echo $pkg | sed "s/.deb/_$ubuntu_version-${{ matrix.arch }}.deb/")
+            mv "$pkg" "$new_name"
+          done
+
+      # Upload build artifacts
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubuntu-packages-${{ matrix.ubuntu }}-${{ matrix.arch }}
+          path: build/*.deb
+          if-no-files-found: error
+
+  # If it's a release tag, upload the packages to GitHub Releases
+  release_packages:
+    name: Release Ubuntu Packages
+    needs: build_deb_packages
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: ubuntu-packages-*
+          merge-multiple: false
+
+      - name: Prepare packages for release
+        run: |
+          mkdir -p release_packages
+          find artifacts -name "*.deb" -exec cp {} release_packages/ \;
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_packages/*.deb

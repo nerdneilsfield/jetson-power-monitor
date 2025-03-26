@@ -1,0 +1,32 @@
+name: Publish Rust Crate
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggered when pushing version tags, such as v0.1.0
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  publish-crate:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Verify crate
+        working-directory: bindings/rust  # Directory already correctly specified
+        run: cargo package --no-verify
+
+      - name: Publish crate
+        working-directory: bindings/rust  # Directory already correctly specified
+        run: cargo publish --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
