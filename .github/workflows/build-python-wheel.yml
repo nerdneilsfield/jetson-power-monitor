@@ -41,7 +41,7 @@ jobs:
           python -m cibuildwheel --output-dir wheelhouse
         env:
           CIBW_ARCHS_LINUX: ${{ matrix.arch }}
-          CIBW_BUILD: cp${{ matrix.python | replace('.', '') }}-*
+          CIBW_BUILD: cp${{ matrix.python == '3.10' && '310' || matrix.python == '3.11' && '311' || matrix.python == '3.12' && '312' || matrix.python == '3.13' && '313' || matrix.python == '3.14' && '314' || matrix.python == '3.8' && '38' || matrix.python == '3.9' && '39' }}-*
           CIBW_SKIP: "*-musllinux*" # Skips musllinux, only builds manylinux
           # If you want to skip tests (if tests run too slow in ARM emulators)
           CIBW_TEST_SKIP: "*"
