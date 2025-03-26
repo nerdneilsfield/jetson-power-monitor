@@ -358,7 +358,7 @@ impl PowerMonitor {
         }
         Ok(names
             .into_iter()
-            .map(|ptr| unsafe { CString::from_raw(ptr as *mut i8).into_string().unwrap() })
+            .map(|ptr| unsafe { CString::from_raw(ptr as *mut _).into_string().unwrap() })
             .collect())
     }
 }
