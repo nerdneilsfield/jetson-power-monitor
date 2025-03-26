@@ -8,9 +8,11 @@
   <a href="/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/nerdneilsfield/jetson-power-monitor" /></a>
   <a href="https://snyk.io/advisor/python/jetpwmon"><img alt="jetpwmon" src="https://snyk.io/advisor/python/jetpwmon/badge.svg" /></a>
   <a href="https://crates.io/crates/jetpwmon"><img src="https://img.shields.io/crates/v/jetpwmon.svg?colorB=319e8c" alt="Version info"></a><br>
-  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22CI+%26+CD%22"><img alt="CI & CD" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/CI%20&%20CD/badge.svg" /></a>
-  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql"><img alt="CodeQL" src="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql/badge.svg?branch=master" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Build%20ARM%20wheels%22"><img alt="Python" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Build%20ARM%20wheels/badge.svg" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Build%20Ubuntu%20Packages%22"><img alt="Deb" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Build%20Ubuntu%20Packages/badge.svg" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Publish%20Rust%20Crate%22"><img alt="Rust" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Publish%20Rust%20Crate/badge.svg" /></a>
 </p>
+
 
 [English](https://github.com/nerdneilsfield/jetson-power-monitor/blob/master/README.md) | 中文
 
