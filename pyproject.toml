@@ -20,6 +20,7 @@ BUILD_PYTHON_BINDINGS = "ON"
 BUILD_TESTS = "OFF"
 BUILD_CLI = "ON"
 SKBUILD="ON"
+CMAKE_BUILD_TYPE = "Release"
 
 # cibuildwheel specific configuration
 [tool.cibuildwheel]
