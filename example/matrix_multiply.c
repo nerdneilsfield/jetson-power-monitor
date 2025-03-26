@@ -4,19 +4,13 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/time.h>
+#include <Eigen/Dense>
 #include "jetpwmon/jetpwmon.h"
 
-#ifdef USE_EIGEN
-#include <Eigen/Dense>
 using namespace Eigen;
-#endif
-
-#ifdef USE_OMP
-#include <omp.h>
-#endif
 
 /* 减小矩阵大小，避免内存问题 */
-#define MATRIX_SIZE 5000
+#define MATRIX_SIZE 1000
 #define NUM_THREADS 4
 #define NUM_ITERATIONS 10
 
@@ -29,111 +23,32 @@ struct thread_args {
     int thread_id;
     int matrix_size;
     int num_iterations;
-    bool completed;  /* 添加完成标志 */
 };
-
-/* Matrix multiplication function using Eigen */
-void matrix_multiply_eigen(int size, int num_iterations) {
-    #ifdef USE_EIGEN
-    printf("线程开始执行Eigen矩阵乘法...\n");
-    MatrixXd A = MatrixXd::Random(size, size);
-    MatrixXd B = MatrixXd::Random(size, size);
-    MatrixXd C(size, size);
-
-    for (int i = 0; i < num_iterations; i++) {
-        C = A * B;
-        A = C;  // Use result as input for next iteration
-    }
-    printf("线程完成Eigen矩阵乘法\n");
-    #endif
-}
-
-/* Matrix multiplication function using OpenMP */
-void matrix_multiply_openmp(int size, int num_iterations) {
-    #ifdef _OPENMP
-    printf("线程开始执行OpenMP矩阵乘法...\n");
-    double **A = (double **)malloc(size * sizeof(double *));
-    double **B = (double **)malloc(size * sizeof(double *));
-    double **C = (double **)malloc(size * sizeof(double *));
-
-    if (!A || !B || !C) {
-        printf("内存分配失败\n");
-        return;
-    }
-
-    for (int i = 0; i < size; i++) {
-        A[i] = (double *)malloc(size * sizeof(double));
-        B[i] = (double *)malloc(size * sizeof(double));
-        C[i] = (double *)malloc(size * sizeof(double));
-        if (!A[i] || !B[i] || !C[i]) {
-            printf("内存分配失败\n");
-            return;
-        }
-    }
-
-    // Initialize matrices
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++) {
-            A[i][j] = rand() / (double)RAND_MAX;
-            B[i][j] = rand() / (double)RAND_MAX;
-        }
-    }
-
-    // Perform matrix multiplication
-    for (int iter = 0; iter < num_iterations; iter++) {
-        #pragma omp parallel for collapse(2)
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                C[i][j] = 0.0;
-                for (int k = 0; k < size; k++) {
-                    C[i][j] += A[i][k] * B[k][j];
-                }
-            }
-        }
-
-        // Use result as input for next iteration
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                A[i][j] = C[i][j];
-            }
-        }
-    }
-
-    // Free memory
-    for (int i = 0; i < size; i++) {
-        free(A[i]);
-        free(B[i]);
-        free(C[i]);
-    }
-    free(A);
-    free(B);
-    free(C);
-    printf("线程完成OpenMP矩阵乘法\n");
-    #endif
-}
-
-/* Thread function for matrix multiplication */
-void *matrix_multiply_thread(void *arg) {
-    struct thread_args *args = (struct thread_args *)arg;
-    
-    printf("线程 %d 开始执行...\n", args->thread_id);
-    
-    #ifdef USE_EIGEN
-    matrix_multiply_eigen(args->matrix_size, args->num_iterations);
-    #else
-    matrix_multiply_openmp(args->matrix_size, args->num_iterations);
-    #endif
-
-    args->completed = true;
-    printf("线程 %d 完成执行\n", args->thread_id);
-    return NULL;
-}
 
 /* Get current time in milliseconds */
 double get_time_ms(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return tv.tv_sec * 1000.0 + tv.tv_usec / 1000.0;
+}
+
+/* Thread function for matrix multiplication */
+void *matrix_multiply_thread(void *arg) {
+    struct thread_args *args = (struct thread_args *)arg;
+    printf("线程 %d 开始执行...\n", args->thread_id);
+
+    // Eigen implementation
+    MatrixXd A = MatrixXd::Random(args->matrix_size, args->matrix_size);
+    MatrixXd B = MatrixXd::Random(args->matrix_size, args->matrix_size);
+    MatrixXd C(args->matrix_size, args->matrix_size);
+
+    for (int i = 0; i < args->num_iterations; i++) {
+        C = A * B;
+        A = C;  // Use result as input for next iteration
+    }
+
+    printf("线程 %d 完成执行\n", args->thread_id);
+    return NULL;
 }
 
 int main(void) {
@@ -174,7 +89,7 @@ int main(void) {
         thread_args[i].thread_id = i;
         thread_args[i].matrix_size = MATRIX_SIZE;
         thread_args[i].num_iterations = NUM_ITERATIONS;
-        thread_args[i].completed = false;
+        
         if (pthread_create(&threads[i], NULL, matrix_multiply_thread, &thread_args[i]) != 0) {
             fprintf(stderr, "创建线程 %d 失败\n", i);
             pm_cleanup(handle);
@@ -232,4 +147,4 @@ int main(void) {
     /* Clean up */
     pm_cleanup(handle);
     return 0;
-}
+} 
