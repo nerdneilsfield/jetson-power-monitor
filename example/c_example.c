@@ -8,7 +8,7 @@ void cpu_intensive_task() {
     printf("开始执行CPU密集型任务...\n");
     
     // 模拟CPU密集型任务
-    const int size = 10000;
+    const int size = 2000;
     double *matrix1 = malloc(size * size * sizeof(double));
     double *matrix2 = malloc(size * size * sizeof(double));
     double *result = malloc(size * size * sizeof(double));

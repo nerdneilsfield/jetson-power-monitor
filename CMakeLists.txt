@@ -68,12 +68,27 @@ if(BUILD_PYTHON_BINDINGS)
     )
 endif()
 
+option(BUILD_CPP_BINDINGS "Build C++ bindings" ON)
+if(BUILD_CPP_BINDINGS)
+    add_library(jetpwmon_cpp SHARED src/jetpwmon++.cpp)
+    target_link_libraries(jetpwmon_cpp PRIVATE jetpwmon_static)
+    add_library(jetpwmon_static_cpp STATIC src/jetpwmon++.cpp)
+    target_link_libraries(jetpwmon_static_cpp PRIVATE jetpwmon_static)
+    install(TARGETS jetpwmon_cpp DESTINATION lib)
+    install(TARGETS jetpwmon_static_cpp DESTINATION lib)
+endif()
+
 
 option(BUILD_EXAMPLES "Build examples" OFF)
 if(BUILD_EXAMPLES)
     add_executable(example_c example/c_example.c)
     target_link_libraries(example_c PRIVATE jetpwmon_static)
     install(TARGETS example_c DESTINATION bin)
+    if(BUILD_CPP_BINDINGS)
+        add_executable(example_cpp example/cpp_example.cpp)
+        target_link_libraries(example_cpp PRIVATE jetpwmon_static_cpp)
+        install(TARGETS example_cpp DESTINATION bin)
+    endif()
 endif()
 
 
