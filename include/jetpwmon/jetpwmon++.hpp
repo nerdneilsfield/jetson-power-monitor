@@ -24,6 +24,11 @@ public:
     PowerMonitor();
 
     /**
+     * @brief Destructor that cleans up resources
+     */
+    ~PowerMonitor();
+
+    /**
      * @brief Set sampling frequency
      * @param frequency_hz Sampling frequency in Hz
      * @throw std::runtime_error if setting frequency fails

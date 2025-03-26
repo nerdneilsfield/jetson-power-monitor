@@ -8,6 +8,7 @@
 #include <thread>
 #include <chrono>
 #include <stdexcept>
+#include <cstring>
 
 namespace jetpwmon {
 
@@ -18,6 +19,10 @@ PowerMonitor::PowerMonitor() : handle_(nullptr, pm_cleanup) {
         throw std::runtime_error(pm_error_string(error));
     }
     handle_.reset(handle);
+}
+
+PowerMonitor::~PowerMonitor() {
+    // unique_ptr will automatically call pm_cleanup
 }
 
 void PowerMonitor::setSamplingFrequency(int frequency_hz) {
@@ -65,7 +70,25 @@ pm_power_data_t PowerMonitor::getLatestData() const {
     if (error != PM_SUCCESS) {
         throw std::runtime_error(pm_error_string(error));
     }
-    return data;
+
+    // Create a complete copy
+    pm_power_data_t result;
+    result.sensor_count = data.sensor_count;
+    
+    // Copy total power data
+    std::memcpy(&result.total, &data.total, sizeof(pm_sensor_data_t));
+    
+    // Allocate and copy sensor data
+    if (data.sensor_count > 0) {
+        result.sensors = new pm_sensor_data_t[data.sensor_count];
+        for (int i = 0; i < data.sensor_count; i++) {
+            std::memcpy(&result.sensors[i], &data.sensors[i], sizeof(pm_sensor_data_t));
+        }
+    } else {
+        result.sensors = nullptr;
+    }
+
+    return result;
 }
 
 pm_power_stats_t PowerMonitor::getStatistics() const {
@@ -74,7 +97,36 @@ pm_power_stats_t PowerMonitor::getStatistics() const {
     if (error != PM_SUCCESS) {
         throw std::runtime_error(pm_error_string(error));
     }
-    return stats;
+
+    // Create a complete copy
+    pm_power_stats_t result;
+    result.sensor_count = stats.sensor_count;
+    
+    // Copy total power statistics
+    std::memcpy(&result.total, &stats.total, sizeof(pm_stats_t));
+    
+    // Copy sensor name
+    std::strncpy(result.total.name, stats.total.name, sizeof(result.total.name) - 1);
+    result.total.name[sizeof(result.total.name) - 1] = '\0';
+    
+    // Allocate and copy sensor data
+    if (stats.sensor_count > 0) {
+        result.sensors = new pm_sensor_stats_t[stats.sensor_count];
+        for (int i = 0; i < stats.sensor_count; i++) {
+            // Copy sensor name
+            std::strncpy(result.sensors[i].name, stats.sensors[i].name, sizeof(result.sensors[i].name) - 1);
+            result.sensors[i].name[sizeof(result.sensors[i].name) - 1] = '\0';
+            
+            // Copy statistics
+            std::memcpy(&result.sensors[i].voltage, &stats.sensors[i].voltage, sizeof(pm_stats_t));
+            std::memcpy(&result.sensors[i].current, &stats.sensors[i].current, sizeof(pm_stats_t));
+            std::memcpy(&result.sensors[i].power, &stats.sensors[i].power, sizeof(pm_stats_t));
+        }
+    } else {
+        result.sensors = nullptr;
+    }
+
+    return result;
 }
 
 void PowerMonitor::resetStatistics() {
