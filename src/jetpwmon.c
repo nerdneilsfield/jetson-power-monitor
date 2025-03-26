@@ -1201,38 +1201,68 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
                 /* Convert units and validate readings */
                 if (read_success)
                 {
-                        /* Convert from uV to V and uA to A */
-                        voltage /= 1000000.0;  /* uV to V */
-                        current /= 1000000.0;  /* uA to A */
-
-                        /* Validate readings based on sensor type */
-                        bool valid_reading = true;
-                        if (strstr(handle->sensor_names[i], "VDD_IN"))
+                        /* For INA3221, keep raw values in mV and mA */
+                        if (handle->sensor_types[i] == PM_SENSOR_TYPE_I2C)
                         {
-                                /* VDD_IN 是系统总功耗 */
-                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
-                                if (current < 0.0 || current > 10.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
-                        {
-                                /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
-                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
-                                if (current < 0.0 || current > 10.0) valid_reading = false;
-                        }
-                        else if (strstr(handle->sensor_names[i], "VDD_SOC"))
-                        {
-                                /* VDD_SOC 是 SoC 电源轨 */
-                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
-                                if (current < 0.0 || current > 10.0) valid_reading = false;
-                        }
-
-                        if (!valid_reading)
-                        {
+                                /* Keep raw values */
                                 #ifdef SHOW_ALL_DEBUG
-                                printf("  Invalid reading for %s: %.3f V, %.3f A\n", 
-                                       handle->sensor_names[i], voltage, current);
+                                printf("  Raw values: %.3f mV, %.3f mA\n", voltage, current);
+                                printf("  Calculated power: %.3f mW\n", voltage * current / 1000.0);
                                 #endif
-                                read_success = false;
+
+                                /* Validate readings based on sensor type */
+                                bool valid_reading = true;
+                                if (strstr(handle->sensor_names[i], "VDD_IN"))
+                                {
+                                        /* VDD_IN 是系统总功耗 */
+                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                }
+                                else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
+                                {
+                                        /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
+                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                }
+                                else if (strstr(handle->sensor_names[i], "VDD_SOC"))
+                                {
+                                        /* VDD_SOC 是 SoC 电源轨 */
+                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                }
+
+                                if (!valid_reading)
+                                {
+                                        #ifdef SHOW_ALL_DEBUG
+                                        printf("  Invalid reading for %s: %.3f mV, %.3f mA\n", 
+                                               handle->sensor_names[i], voltage, current);
+                                        #endif
+                                        read_success = false;
+                                }
+
+                                /* Store values in V and A for consistency */
+                                voltage /= 1000.0;  /* mV to V */
+                                current /= 1000.0;  /* mA to A */
+                        }
+                        else /* PM_SENSOR_TYPE_SYSTEM */
+                        {
+                                /* Convert from mV to V and mA to A */
+                                voltage /= 1000.0;  /* mV to V */
+                                current /= 1000.0;  /* mA to A */
+
+                                /* Validate readings */
+                                bool valid_reading = true;
+                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
+                                if (current < 0.0 || current > 10.0) valid_reading = false;
+
+                                if (!valid_reading)
+                                {
+                                        #ifdef SHOW_ALL_DEBUG
+                                        printf("  Invalid reading for %s: %.3f V, %.3f A\n", 
+                                               handle->sensor_names[i], voltage, current);
+                                        #endif
+                                        read_success = false;
+                                }
                         }
 
                         #ifdef SHOW_ALL_DEBUG
