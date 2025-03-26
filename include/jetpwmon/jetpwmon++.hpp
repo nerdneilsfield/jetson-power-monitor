@@ -4,8 +4,7 @@
  * @author Qi Deng<dengqi935@gmail.com>
  */
 
-#ifndef JETPWMON_PLUS_PLUS_HPP
-#define JETPWMON_PLUS_PLUS_HPP
+#pragma once
 
 #include <jetpwmon/jetpwmon.h>
 #include <string>
@@ -15,6 +14,63 @@
 
 namespace jetpwmon {
 
+/**
+ * @brief RAII wrapper for pm_power_stats_t
+ */
+class PowerStats {
+public:
+    PowerStats(const pm_power_stats_t& stats);
+    ~PowerStats();
+
+    // Delete copy constructor and assignment operator
+    PowerStats(const PowerStats&) = delete;
+    PowerStats& operator=(const PowerStats&) = delete;
+
+    // Allow move
+    PowerStats(PowerStats&&) noexcept;
+    PowerStats& operator=(PowerStats&&) noexcept;
+
+    // Getters
+    const pm_sensor_stats_t& getTotal() const { return total_; }
+    const pm_sensor_stats_t* getSensors() const { return sensors_; }
+    int getSensorCount() const { return sensor_count_; }
+
+private:
+    pm_sensor_stats_t total_;
+    pm_sensor_stats_t* sensors_;
+    int sensor_count_;
+};
+
+/**
+ * @brief RAII wrapper for pm_power_data_t
+ */
+class PowerData {
+public:
+    PowerData(const pm_power_data_t& data);
+    ~PowerData();
+
+    // Delete copy constructor and assignment operator
+    PowerData(const PowerData&) = delete;
+    PowerData& operator=(const PowerData&) = delete;
+
+    // Allow move
+    PowerData(PowerData&&) noexcept;
+    PowerData& operator=(PowerData&&) noexcept;
+
+    // Getters
+    const pm_sensor_data_t& getTotal() const { return total_; }
+    const pm_sensor_data_t* getSensors() const { return sensors_; }
+    int getSensorCount() const { return sensor_count_; }
+
+private:
+    pm_sensor_data_t total_;
+    pm_sensor_data_t* sensors_;
+    int sensor_count_;
+};
+
+/**
+ * @brief RAII wrapper for the power monitoring library
+ */
 class PowerMonitor {
 public:
     /**
@@ -66,14 +122,14 @@ public:
      * @return Power data structure
      * @throw std::runtime_error if getting data fails
      */
-    pm_power_data_t getLatestData() const;
+    PowerData getLatestData() const;
 
     /**
      * @brief Get power statistics
      * @return Power statistics structure
      * @throw std::runtime_error if getting statistics fails
      */
-    pm_power_stats_t getStatistics() const;
+    PowerStats getStatistics() const;
 
     /**
      * @brief Reset statistics
@@ -95,10 +151,21 @@ public:
      */
     std::vector<std::string> getSensorNames() const;
 
+    // Delete copy constructor and assignment operator
+    PowerMonitor(const PowerMonitor&) = delete;
+    PowerMonitor& operator=(const PowerMonitor&) = delete;
+
+    // Allow move
+    PowerMonitor(PowerMonitor&&) noexcept;
+    PowerMonitor& operator=(PowerMonitor&&) noexcept;
+
 private:
-    std::unique_ptr<pm_handle_s, decltype(&pm_cleanup)> handle_;
+    struct HandleDeleter {
+        void operator()(pm_handle_t* handle) const {
+            if (handle) pm_cleanup(*handle);
+        }
+    };
+    std::unique_ptr<pm_handle_t, HandleDeleter> handle_;
 };
 
 } // namespace jetpwmon
-
-#endif // JETPWMON_PLUS_PLUS_HPP

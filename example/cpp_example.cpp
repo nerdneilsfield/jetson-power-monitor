@@ -75,27 +75,28 @@ void monitorPowerConsumption(std::function<void()> task) {
         // Stop sampling
         monitor.stopSampling();
         
-        // Get statistics
+        // Get statistics (RAII automatically manages memory)
         auto stats = monitor.getStatistics();
         
         // Print total power statistics
         std::cout << "\nPower Statistics:" << std::endl;
         std::cout << "Total Power:" << std::endl;
-        std::cout << "  Min: " << stats.total.power.min << " W" << std::endl;
-        std::cout << "  Max: " << stats.total.power.max << " W" << std::endl;
-        std::cout << "  Avg: " << stats.total.power.avg << " W" << std::endl;
-        std::cout << "  Total Energy: " << stats.total.power.total << " J" << std::endl;
-        std::cout << "  Samples: " << stats.total.power.count << std::endl;
+        std::cout << "  Min: " << stats.getTotal().power.min << " W" << std::endl;
+        std::cout << "  Max: " << stats.getTotal().power.max << " W" << std::endl;
+        std::cout << "  Avg: " << stats.getTotal().power.avg << " W" << std::endl;
+        std::cout << "  Total Energy: " << stats.getTotal().power.total << " J" << std::endl;
+        std::cout << "  Samples: " << stats.getTotal().power.count << std::endl;
         
         // Print individual sensor statistics
         std::cout << "\nIndividual Sensor Statistics:" << std::endl;
-        for (int i = 0; i < stats.sensor_count; i++) {
-            std::cout << "\nSensor: " << stats.sensors[i].name << std::endl;
-            std::cout << "  Min: " << stats.sensors[i].power.min << " W" << std::endl;
-            std::cout << "  Max: " << stats.sensors[i].power.max << " W" << std::endl;
-            std::cout << "  Avg: " << stats.sensors[i].power.avg << " W" << std::endl;
-            std::cout << "  Total Energy: " << stats.sensors[i].power.total << " J" << std::endl;
-            std::cout << "  Samples: " << stats.sensors[i].power.count << std::endl;
+        for (int i = 0; i < stats.getSensorCount(); i++) {
+            const auto& sensor = stats.getSensors()[i];
+            std::cout << "\nSensor: " << sensor.name << std::endl;
+            std::cout << "  Min: " << sensor.power.min << " W" << std::endl;
+            std::cout << "  Max: " << sensor.power.max << " W" << std::endl;
+            std::cout << "  Avg: " << sensor.power.avg << " W" << std::endl;
+            std::cout << "  Total Energy: " << sensor.power.total << " J" << std::endl;
+            std::cout << "  Samples: " << sensor.power.count << std::endl;
         }
         
     } catch (const std::exception& e) {

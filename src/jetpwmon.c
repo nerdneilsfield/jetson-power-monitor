@@ -69,9 +69,6 @@ static void *sampling_thread_func(void *arg);
 static pm_error_t discover_sensors(pm_handle_t handle);
 static pm_error_t read_sensor_data(pm_handle_t handle);
 static pm_error_t update_statistics(pm_handle_t handle);
-static int read_file_int(const char *path);
-static double read_file_double(const char *path);
-static char *read_file_string(const char *path);
 static bool check_file_exists(const char *path);
 static pm_error_t find_all_i2c_power_monitor(pm_handle_t handle);
 static pm_error_t find_all_system_monitor(pm_handle_t handle);
@@ -610,8 +607,8 @@ static pm_error_t find_all_i2c_power_monitor(pm_handle_t handle)
 {
         DIR *dir;
         struct dirent *entry;
-        char path[512];
-        char name_path[512];
+        char path[1024];  /* Increased from 512 */
+        char name_path[1024];  /* Increased from 512 */
         char buffer[256];
         FILE *fp;
 
@@ -632,13 +629,17 @@ static pm_error_t find_all_i2c_power_monitor(pm_handle_t handle)
                 }
 
                 /* Build full path to the device */
-                snprintf(path, sizeof(path), "%s/%s", handle->i2c_path, entry->d_name);
+                if (snprintf(path, sizeof(path), "%s/%s", handle->i2c_path, entry->d_name) >= (int)sizeof(path)) {
+                        continue; /* Skip if path would be truncated */
+                }
 
                 /* Check if it's a directory */
                 if (is_directory(path))
                 {
                         /* Check for a "name" file to identify the sensor type */
-                        snprintf(name_path, sizeof(name_path), "%s/name", path);
+                        if (snprintf(name_path, sizeof(name_path), "%s/name", path) >= (int)sizeof(name_path)) {
+                                continue; /* Skip if path would be truncated */
+                        }
 
                         if (check_file_exists(name_path))
                         {
@@ -672,8 +673,8 @@ static pm_error_t find_driver_power_folders(pm_handle_t handle, const char *path
 {
         DIR *dir;
         struct dirent *entry;
-        char driver_path[512];
-        char hwmon_path[512];
+        char driver_path[1024];  /* Increased from 512 */
+        char hwmon_path[1024];  /* Increased from 512 */
 
         dir = opendir(path);
         if (!dir)
@@ -703,8 +704,11 @@ static pm_error_t find_driver_power_folders(pm_handle_t handle, const char *path
                                         {
                                                 if (hwmon_entry->d_name[0] != '.')
                                                 {
-                                                        snprintf(hwmon_path, sizeof(hwmon_path), "%s/%s",
-                                                                 driver_path, hwmon_entry->d_name);
+                                                        if (snprintf(hwmon_path, sizeof(hwmon_path), "%s/%s",
+                                                                 driver_path, hwmon_entry->d_name) >= (int)sizeof(hwmon_path)) {
+                                                                hwmon_entry = readdir(hwmon_dir);
+                                                                continue; /* Skip if path would be truncated */
+                                                        }
                                                         list_all_i2c_ports(handle, hwmon_path);
                                                         break;
                                                 }
@@ -730,9 +734,9 @@ static pm_error_t find_all_system_monitor(pm_handle_t handle)
 {
         DIR *dir;
         struct dirent *entry;
-        char local_path[512];
-        char path_type[512];
-        char path_name[512];
+        char local_path[1024];  /* Increased from 512 */
+        char path_type[1024];  /* Increased from 512 */
+        char path_name[1024];  /* Increased from 512 */
         char buffer[256];
         FILE *fp;
 
@@ -771,7 +775,9 @@ static pm_error_t find_all_system_monitor(pm_handle_t handle)
                 }
 
                 /* Read the type */
-                snprintf(path_type, sizeof(path_type), "%s/type", local_path);
+                if (snprintf(path_type, sizeof(path_type), "%s/type", local_path) >= (int)sizeof(path_type)) {
+                        continue; /* Skip if path would be truncated */
+                }
                 char *type_supply = "SYSTEM";
 
                 if (check_file_exists(path_type))
@@ -789,7 +795,9 @@ static pm_error_t find_all_system_monitor(pm_handle_t handle)
                 }
 
                 /* Read the model name */
-                snprintf(path_name, sizeof(path_name), "%s/model_name", local_path);
+                if (snprintf(path_name, sizeof(path_name), "%s/model_name", local_path) >= (int)sizeof(path_name)) {
+                        continue; /* Skip if path would be truncated */
+                }
                 char *model_name = "<EMPTY>";
 
                 if (check_file_exists(path_name))
@@ -1188,76 +1196,6 @@ static pm_error_t update_statistics(pm_handle_t handle)
 
         pthread_mutex_unlock(&handle->data_mutex);
         return PM_SUCCESS;
-}
-
-/* Read an integer from a file */
-static int read_file_int(const char *path)
-{
-        FILE *fp = fopen(path, "r");
-        if (!fp)
-        {
-                return -1;
-        }
-
-        int value;
-        int result = fscanf(fp, "%d", &value);
-        fclose(fp);
-
-        if (result != 1)
-        {
-                return -1;
-        }
-
-        return value;
-}
-
-/* Read a double from a file */
-static double read_file_double(const char *path)
-{
-        FILE *fp = fopen(path, "r");
-        if (!fp)
-        {
-                return -1.0;
-        }
-
-        double value;
-        int result = fscanf(fp, "%lf", &value);
-        fclose(fp);
-
-        if (result != 1)
-        {
-                return -1.0;
-        }
-
-        return value;
-}
-
-/* Read a string from a file */
-static char *read_file_string(const char *path)
-{
-        FILE *fp = fopen(path, "r");
-        if (!fp)
-        {
-                return NULL;
-        }
-
-        char buffer[256];
-        char *result = fgets(buffer, sizeof(buffer), fp);
-        fclose(fp);
-
-        if (!result)
-        {
-                return NULL;
-        }
-
-        /* Remove trailing newline */
-        char *newline = strchr(buffer, '\n');
-        if (newline)
-        {
-                *newline = '\0';
-        }
-
-        return strdup_safe(buffer);
 }
 
 /* Check if a file exists */
