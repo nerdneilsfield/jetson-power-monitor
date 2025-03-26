@@ -30,3 +30,24 @@
 *.exe
 *.out
 *.app
+
+# Add python files
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+
+# pybind11
+build
+
+# cache
+*.pycache
+__pycache__
+
+# egg-info
+*.egg-info
+
+# dist
+dist
+
