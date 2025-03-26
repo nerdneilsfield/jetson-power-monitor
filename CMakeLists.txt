@@ -21,6 +21,12 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Add option for debug output
+option(SHOW_ALL "Show all debug output" OFF)
+if(SHOW_ALL)
+    add_definitions(-DSHOW_ALL_DEBUG)
+endif()
+
 include_directories(./include)
 
 add_library(jetpwmon SHARED src/jetpwmon.c)
@@ -80,12 +86,28 @@ endif()
 
 
 option(BUILD_EXAMPLES "Build examples" OFF)
+option(USE_OMP "Use OpenMP" OFF)
+option(USE_EIGEN "Use Eigen" ON)
 if(BUILD_EXAMPLES)
     # find omp 
     find_package(OpenMP REQUIRED)
     add_executable(example_c example/c_example.c)
     target_link_libraries(example_c PRIVATE jetpwmon_static OpenMP::OpenMP_CXX)
     install(TARGETS example_c DESTINATION bin)
+
+    if(USE_OMP)
+        add_executable(matrix_multiply example/matrix_multiply.c)
+        target_link_libraries(matrix_multiply PRIVATE jetpwmon_static OpenMP::OpenMP_CXX)
+        install(TARGETS matrix_multiply DESTINATION bin)
+    endif()
+
+    if(USE_EIGEN)
+        find_package(Eigen3 REQUIRED)
+        add_executable(matrix_multiply example/matrix_multiply.c)
+        target_link_libraries(matrix_multiply PRIVATE jetpwmon_static Eigen3::Eigen)
+        install(TARGETS matrix_multiply DESTINATION bin)
+    endif()
+
     if(BUILD_CPP_BINDINGS)
         add_executable(example_cpp example/cpp_example.cpp)
         target_link_libraries(example_cpp PRIVATE jetpwmon_static_cpp OpenMP::OpenMP_CXX)
@@ -113,6 +135,7 @@ set(CPACK_COMPONENT_APPLICATIONS_DISPLAY_NAME "Applications")
 set(CPACK_COMPONENTS_ALL libraries headers applications)
 set(CPACK_DEB_COMPONENT_INSTALL ON)
 
+
 # 将安装目标关联到组件
 set_target_properties(jetpwmon PROPERTIES COMPONENT libraries)
 set_target_properties(jetpwmon_static PROPERTIES COMPONENT libraries)
@@ -137,10 +160,4 @@ set(CPACK_DEBIAN_HEADERS_PACKAGE_DEPENDS "libjetpwmon (= ${PROJECT_VERSION})")
 # 包含 CPack 模块
 include(CPack)
 
-# Add option for debug output
-option(SHOW_ALL "Show all debug output" OFF)
-
-if(SHOW_ALL)
-    target_compile_definitions(jetpwmon PRIVATE SHOW_ALL_DEBUG)
-endif()
 
