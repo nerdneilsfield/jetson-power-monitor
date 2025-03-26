@@ -22,7 +22,11 @@ PowerStats::PowerStats(const pm_power_stats_t& stats)
     if (sensor_count_ > 0) {
         sensors_ = new pm_sensor_stats_t[sensor_count_];
         for (int i = 0; i < sensor_count_; i++) {
+            // Deep copy each sensor's data
             std::memcpy(&sensors_[i], &stats.sensors[i], sizeof(pm_sensor_stats_t));
+            // Copy the name string
+            std::strncpy(sensors_[i].name, stats.sensors[i].name, sizeof(sensors_[i].name) - 1);
+            sensors_[i].name[sizeof(sensors_[i].name) - 1] = '\0';
         }
     } else {
         sensors_ = nullptr;
@@ -32,6 +36,7 @@ PowerStats::PowerStats(const pm_power_stats_t& stats)
 PowerStats::~PowerStats() {
     if (sensors_) {
         delete[] sensors_;
+        sensors_ = nullptr;
     }
 }
 
@@ -65,7 +70,11 @@ PowerData::PowerData(const pm_power_data_t& data)
     if (sensor_count_ > 0) {
         sensors_ = new pm_sensor_data_t[sensor_count_];
         for (int i = 0; i < sensor_count_; i++) {
+            // Deep copy each sensor's data
             std::memcpy(&sensors_[i], &data.sensors[i], sizeof(pm_sensor_data_t));
+            // Copy the name string
+            std::strncpy(sensors_[i].name, data.sensors[i].name, sizeof(sensors_[i].name) - 1);
+            sensors_[i].name[sizeof(sensors_[i].name) - 1] = '\0';
         }
     } else {
         sensors_ = nullptr;
@@ -75,6 +84,7 @@ PowerData::PowerData(const pm_power_data_t& data)
 PowerData::~PowerData() {
     if (sensors_) {
         delete[] sensors_;
+        sensors_ = nullptr;
     }
 }
 
