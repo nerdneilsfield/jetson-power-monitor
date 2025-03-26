@@ -46,6 +46,7 @@ jobs:
           CIBW_TEST_SKIP: "*" # Skip tests for faster builds
           CIBW_BEFORE_BUILD: pip install pybind11 scikit-build-core
           CIBW_ENVIRONMENT: "CIBW_BUILD=cp${{ matrix.python == '3.10' && '310' || matrix.python == '3.11' && '311' || matrix.python == '3.12' && '312' || matrix.python == '3.8' && '38' || matrix.python == '3.9' && '39' }}-*"
+          CIBW_REPAIR_WHEEL_COMMAND: "auditwheel repair -w {dest_dir} {wheel} --exclude libjetpwmon.so"
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
