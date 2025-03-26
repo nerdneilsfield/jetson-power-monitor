@@ -26,6 +26,10 @@ build-wheel: ## Build the wheel
 install-python: ## Install python test
 	python -m pip install -e .
 
+.PHONY: install-python-dev
+install-python-dev: ## Install python dev
+	python -m pip install -e .[dev]
+
 .PHONY: test
 test: ## Run the tests
 	python -m pytest tests

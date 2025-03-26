@@ -11,7 +11,15 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.7"
-dependencies = ["pybind11>=2.9.0"] 
+dependencies = ["pybind11>=2.9.0", "scikit-build-core>=0.1.0"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.5",    
+    "black>=25.1.0", 
+    "build>=0.10.0"
+]
+
 
 [tool.scikit-build.cmake]
 verbose = true
