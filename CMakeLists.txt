@@ -69,5 +69,12 @@ if(BUILD_PYTHON_BINDINGS)
 endif()
 
 
+option(BUILD_EXAMPLES "Build examples" OFF)
+if(BUILD_EXAMPLES)
+    add_executable(example_c example/c_example.c)
+    target_link_libraries(example_c PRIVATE jetpwmon_static)
+    install(TARGETS example_c DESTINATION bin)
+endif()
+
 
 
