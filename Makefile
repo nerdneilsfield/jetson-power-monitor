@@ -34,6 +34,17 @@ install-python-dev: ## Install python dev
 test-python: ## Run the tests
 	python tests/test.py
 
+.PHONY: copy-rust
+copy-rust: ## Copy the rust project
+	cp -r include/jetpwmon/jetpwmon.h bindings/rust/vendor/include/jetpwmon/
+	cp -r src/jetpwmon.c bindings/rust/vendor/src/
+	cp -r LICENSE bindings/rust/
+	cp -r README.md bindings/rust/
+
+.PHONY: build-rust
+build-rust: copy-rust ## Build the rust project
+	cd bindings/rust && cargo build
+
 .PHONY: test-rust
 test-rust: ## Run the tests
 	cd bindings/rust && cargo test

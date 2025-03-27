@@ -19,7 +19,15 @@ namespace jetpwmon {
  */
 class PowerStats {
 public:
+    /**
+     * @brief Constructor that initializes the PowerStats object
+     * @param stats Reference to pm_power_stats_t
+     */
     PowerStats(const pm_power_stats_t& stats);
+
+    /**
+     * @brief Destructor that cleans up resources
+     */
     ~PowerStats();
 
     // Delete copy constructor and assignment operator
@@ -46,7 +54,15 @@ private:
  */
 class PowerData {
 public:
+    /**
+     * @brief Constructor that initializes the PowerData object
+     * @param data Reference to pm_power_data_t
+     */
     PowerData(const pm_power_data_t& data);
+
+    /**
+     * @brief Destructor that cleans up resources
+     */
     ~PowerData();
 
     // Delete copy constructor and assignment operator
@@ -74,7 +90,7 @@ private:
 class PowerMonitor {
 public:
     /**
-     * @brief Constructor that initializes the power monitor
+     * @brief Constructor that initializes the PowerMonitor object
      * @throw std::runtime_error if initialization fails
      */
     PowerMonitor();

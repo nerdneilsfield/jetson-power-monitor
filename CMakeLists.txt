@@ -39,11 +39,6 @@ target_link_libraries(jetpwmon PRIVATE pthread)
 add_library(jetpwmon_static STATIC src/jetpwmon.c)
 target_link_libraries(jetpwmon_static PRIVATE pthread)
 
-option(BUILD_TESTS "Build tests" OFF)
-if(BUILD_TESTS)
-    add_subdirectory(tests)
-endif()
-
 option(BUILD_CLI "Build CLI" ON)
 if(BUILD_CLI)
     add_executable(jetpwmon_cli src/jetpwmon_cli.c)
@@ -97,7 +92,32 @@ if(BUILD_EXAMPLES)
     if(BUILD_CPP_BINDINGS)
         add_executable(example_cpp example/cpp_example.cpp)
         target_link_libraries(example_cpp PRIVATE jetpwmon_static_cpp OpenMP::OpenMP_CXX)
+
+        if(USE_EIGEN)
+            add_executable(matrix_multiply_cpp example/matrix_multiply_cpp.cpp)
+            target_link_libraries(matrix_multiply_cpp PRIVATE jetpwmon_static_cpp Eigen3::Eigen)
+        endif()
     endif()
+endif()
+
+option(BUILD_TESTS "Build tests" OFF)
+if(BUILD_TESTS)
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+    )
+    FetchContent_MakeAvailable(googletest)
+    enable_testing()
+
+    add_executable(c_api_test tests/test_c_api.cpp)
+    target_link_libraries(c_api_test PRIVATE jetpwmon_static GTest::gtest_main pthread)
+    if(BUILD_CPP_BINDINGS)
+        add_executable(cpp_api_test tests/test_cpp_api.cpp)
+        target_link_libraries(cpp_api_test PRIVATE jetpwmon_static_cpp GTest::gtest_main pthread)
+    endif()
+
+    include(GoogleTest)
 endif()
 
 # 创建导出目标
@@ -192,6 +212,11 @@ if(BUILD_EXAMPLES)
         install(TARGETS example_cpp
             RUNTIME DESTINATION bin
         )
+        if(USE_EIGEN)
+            install(TARGETS matrix_multiply_cpp
+                RUNTIME DESTINATION bin
+            )
+        endif()
     endif()
 endif()
 
