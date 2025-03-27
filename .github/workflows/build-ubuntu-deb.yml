@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config
+          sudo apt-get install -y build-essential cmake pkg-config libncurses-dev
 
       # Configure cross-compilation environment (if necessary)
       - name: Setup cross-compilation

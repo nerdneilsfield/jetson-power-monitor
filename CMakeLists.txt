@@ -247,6 +247,9 @@ endif()
 if(USE_OMP)
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libomp-dev")
 endif()
+if(BUILD_CLI)
+  set(CPACK_DEBIAN_PACKAGE_DEPENDS "${CPACK_DEBIAN_PACKAGE_DEPENDS}, libncurses-dev")
+endif()
 
 # 设置包的分类和优先级
 set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
