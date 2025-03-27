@@ -8,6 +8,7 @@
                 "set": "cpp",
                 "unordered_map": "cpp",
                 "unordered_set": "cpp",
-                "ostream": "cpp"
+                "ostream": "cpp",
+                "jetpwmon.h": "c"
         }
 }
