@@ -1,6 +1,20 @@
 # jetson-power-monitor
 
 <p align="center">
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor"><img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/nerdneilsfield/jetson-power-monitor?style=social" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor"><img alt="GitHub issues" src="https://img.shields.io/github/issues/nerdneilsfield/jetson-power-monitor.svg" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor"><img alt="GitHub last commit" src="https://img.shields.io/github/last-commit/nerdneilsfield/jetson-power-monitor.svg" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/nerdneilsfield/jetson-power-monitor.svg" /></a>
+</p>
+
+<p align="center">
+        <a href=""><img alt="Build With C" src="https://img.shields.io/badge/Made%20with-C-1f425f.svg" /></a>
+        <a href=""><img alt="Build With C++" src="https://img.shields.io/badge/Made%20with-C++-1f425f.svg" /></a>
+        <a href=""><img alt="Build With Python" src="https://img.shields.io/badge/Made%20with-Python-1f425f.svg" /></a>
+        <a href=""><img alt="Build With Rust" src="https://img.shields.io/badge/Made%20with-Rust-1f425f.svg" /></a>
+<p align="center">
+
+<p align="center">
   <a href="https://pypistats.org/packages/jetpwmon"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dw/jetpwmon.svg" /></a>
   <a href="https://badge.fury.io/py/jetpwmon"><img alt="PyPI version" src="https://badge.fury.io/py/jetpwmon.svg" /></a>
   <a href="https://www.python.org/"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/jetpwmon.svg" /></a>
@@ -12,6 +26,7 @@
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Build%20Ubuntu%20Packages%22"><img alt="Deb" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Build%20Ubuntu%20Packages/badge.svg" /></a>
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Publish%20Rust%20Crate%22"><img alt="Rust" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Publish%20Rust%20Crate/badge.svg" /></a>
 </p>
+
 
 [English](https://github.com/nerdneilsfield/jetson-power-monitor/blob/master/README.md) | 中文
 
@@ -276,6 +291,7 @@ fn main() -> Result<(), Error> {
     println!("\n监控器将自动清理。");
     Ok(())
 }
+```
 
 <br/>
 
