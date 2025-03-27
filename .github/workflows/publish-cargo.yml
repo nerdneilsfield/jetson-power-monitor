@@ -24,6 +24,8 @@ jobs:
       - name: Verify crate
         working-directory: bindings/rust  # Directory already correctly specified
         run: |
+          mkdir -p vendor/include/jetpwmon/
+          mkdir -p vendor/include/src
           cp -r ../../include/jetpwmon/jetpwmon.h vendor/include/jetpwmon/
           cp -r ../../src/jetpwmon.c vendor/src/
           cp -r ../../LICENSE vendor/
