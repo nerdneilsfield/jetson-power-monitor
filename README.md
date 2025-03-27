@@ -25,6 +25,7 @@
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Build%20ARM%20wheels%22"><img alt="Python" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Build%20ARM%20wheels/badge.svg" /></a>
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Build%20Ubuntu%20Packages%22"><img alt="Deb" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Build%20Ubuntu%20Packages/badge.svg" /></a>
   <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions?query=workflow%3A%22Publish%20Rust%20Crate%22"><img alt="Rust" src="https://github.com/nerdneilsfield/jetson-power-monitor/workflows/Publish%20Rust%20Crate/badge.svg" /></a>
+  <a href="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql"><img alt="CodeQL" src="https://github.com/nerdneilsfield/jetson-power-monitor/actions/workflows/github-code-scanning/codeql/badge.svg?branch=master" /></a>
 </p>
 
 English | [中文](https://github.com/nerdneilsfield/jetson-power-monitor/blob/master/README_CN.md)

@@ -118,7 +118,7 @@ static void print_usage(const char *prog_name) {
 // --- Main Function ---
 int main(int argc, char* argv[]) {
     pm_error_t error;
-    int sampling_frequency = 1; // Library sampling frequency
+    int sampling_frequency = 50; // Library sampling frequency
     int duration = 0;
     int update_interval_ms = 1000; // Screen refresh interval
     int opt;

@@ -59,7 +59,7 @@ def parse_arguments():
         "-f",
         "--frequency",
         type=int,
-        default=1,
+        default=50,
         metavar="HZ",
         help="Internal library sampling frequency in Hz.",
     )
