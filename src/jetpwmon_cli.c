@@ -1,204 +1,252 @@
 /**
  * @file jetpwmon_cli.c
- * @brief Command line interface for the power monitor library
- *
- * This program provides a command line interface to the power monitor library
- * to monitor power consumption and collect statistics.
+ * @brief Dynamic command line interface for the power monitor library using ncurses.
  */
+
+#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 500
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <unistd.h>     // For usleep, getopt
 #include <signal.h>
+#include <time.h>       // For clock_gettime
+#include <ncurses.h>    // For terminal UI
+#include <locale.h>     // For setlocale (UTF-8 support)
 #include "jetpwmon/jetpwmon.h"
 
-/* Global handle for signal handler */
-static pm_handle_t g_handle = NULL;
+// --- Global Variables ---
+static pm_handle_t g_handle = NULL; // Global handle for signal handler cleanup
+volatile sig_atomic_t g_terminate_flag = 0; // Signal flag for graceful shutdown
 
-/* Signal handler for clean shutdown */
+// --- Signal Handler ---
 static void signal_handler(int signum) {
-    if (g_handle) {
-        printf("Stopping power monitoring...\n");
-        pm_stop_sampling(g_handle);
-        pm_cleanup(g_handle);
-    }
-    exit(0);
+    (void)signum; // Unused parameter
+    g_terminate_flag = 1; // Set flag to request termination
 }
 
-/* Print power data */
-static void print_power_data(const pm_power_data_t* data) {
-    printf("===== Power Data =====\n");
-    printf("Total Power: %.2f W (%.2f V, %.2f A)\n",
-           data->total.power, data->total.voltage, data->total.current);
-    printf("\nSensor Details:\n");
+// --- ncurses UI Function ---
+static void draw_ui(pm_handle_t handle, int freq, double elapsed_sec) {
+    pm_error_t err;
+    pm_power_data_t data;
+    int row = 0;
+    int col = 0;
+    char buffer[256]; // Buffer for formatted strings
 
-    for (int i = 0; i < data->sensor_count; i++) {
-        const pm_sensor_data_t* sensor = &data->sensors[i];
-        printf("  %s: %.2f W (%.2f V, %.2f A) - %s\n",
-               sensor->name, sensor->power, sensor->voltage, sensor->current,
-               sensor->online ? "Online" : "Offline");
+    // 1. Get Latest Data (MUST use the fixed C API version)
+    // Assuming API Option A: data.sensors points to internal buffer
+    err = pm_get_latest_data(handle, &data);
+    if (err != PM_SUCCESS) {
+        mvprintw(row++, col, "Error getting data: %s", pm_error_string(err));
+        refresh();
+        usleep(500000); // Show error briefly
+        return;
     }
 
-    printf("\n");
-}
+    // 2. Clear Screen
+    clear();
 
-/* Print power statistics */
-static void print_power_stats(const pm_power_stats_t* stats) {
-    printf("===== Power Statistics =====\n");
-    printf("Total Power: Avg=%.2f W, Min=%.2f W, Max=%.2f W\n",
-           stats->total.power.avg, stats->total.power.min, stats->total.power.max);
-    printf("\nSensor Statistics:\n");
+    // 3. Print Header Info
+    attron(A_BOLD); // Turn on bold attribute
+    snprintf(buffer, sizeof(buffer), "Jetson Power Monitor (Freq: %d Hz, Elapsed: %.1f s) - Press 'q' to quit",
+             freq, elapsed_sec);
+    mvprintw(row++, col, "%s", buffer);
+    attroff(A_BOLD); // Turn off bold attribute
+    row++; // Add a blank line
 
-    for (int i = 0; i < stats->sensor_count; i++) {
-        const pm_sensor_stats_t* sensor = &stats->sensors[i];
-        printf("  %s: Avg=%.2f W, Min=%.2f W, Max=%.2f W\n",
-               sensor->name, sensor->power.avg, sensor->power.min, sensor->power.max);
+    // 4. Print Table Header
+    attron(A_UNDERLINE);
+    mvprintw(row++, col, "%-18s %10s %10s %10s %10s %-10s",
+             "Sensor Name", "Power (W)", "Voltage(V)", "Current(A)", "Online", "Status");
+    attroff(A_UNDERLINE);
+
+    // 5. Print Total Data Row
+    mvprintw(row++, col, "%-18s %10.2f %10.2f %10.2f %10s %-10s",
+             data.total.name,
+             data.total.power,
+             data.total.voltage,
+             data.total.current,
+             data.total.online ? "Yes" : "No",
+             data.total.status);
+
+    // 6. Print Individual Sensor Rows
+    if (data.sensors != NULL && data.sensor_count > 0) {
+        for (int i = 0; i < data.sensor_count; i++) {
+            const pm_sensor_data_t* sensor = &data.sensors[i]; // Access via pointer
+            mvprintw(row++, col, "%-18s %10.2f %10.2f %10.2f %10s %-10s",
+                     sensor->name, // Assumes null-terminated
+                     sensor->power,
+                     sensor->voltage,
+                     sensor->current,
+                     sensor->online ? "Yes" : "No",
+                     sensor->status // Assumes null-terminated
+            );
+        }
+    } else {
+        mvprintw(row++, col, "No individual sensor data available.");
     }
 
-    printf("\n");
+    // 7. Refresh Screen
+    refresh();
 }
 
-/* Main function */
+// --- Usage Function ---
+static void print_usage(const char *prog_name) {
+    printf("Usage: %s [-f frequency_hz] [-d duration_seconds] [-i interval_ms]\n", prog_name);
+    printf("  -f frequency_hz     Sampling frequency in Hz (default: 1)\n");
+    printf("  -d duration_seconds Monitoring duration in seconds (default: indefinite)\n");
+    printf("  -i interval_ms      Screen update interval in milliseconds (default: 1000)\n");
+    printf("  -h                  Show this help message\n");
+}
+
+// --- Main Function ---
 int main(int argc, char* argv[]) {
     pm_error_t error;
-    pm_handle_t handle;
     int sampling_frequency = 1;
-    int duration = 10;
+    int duration = 0; // 0 means run indefinitely
+    int update_interval_ms = 1000; // Default screen update interval
+    int opt;
 
-    /* Parse command line arguments */
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-            sampling_frequency = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
-            duration = atoi(argv[i + 1]);
-            i++;
-        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            printf("Usage: %s [-f frequency_hz] [-d duration_seconds]\n", argv[0]);
-            printf("  -f frequency_hz      Sampling frequency in Hz (default: 1)\n");
-            printf("  -d duration_seconds  Sampling duration in seconds (default: 10)\n");
-            printf("  -h, --help           Show this help message\n");
-            return 0;
+    // --- Parse Command Line Arguments using getopt ---
+    while ((opt = getopt(argc, argv, "f:d:i:h")) != -1) {
+        switch (opt) {
+            case 'f':
+                sampling_frequency = atoi(optarg);
+                if (sampling_frequency <= 0) {
+                    fprintf(stderr, "Error: Sampling frequency must be positive.\n");
+                    return 1;
+                }
+                break;
+            case 'd':
+                duration = atoi(optarg);
+                if (duration < 0) {
+                    fprintf(stderr, "Error: Duration cannot be negative.\n");
+                    return 1;
+                }
+                break;
+            case 'i':
+                update_interval_ms = atoi(optarg);
+                if (update_interval_ms <= 0) {
+                    fprintf(stderr, "Error: Update interval must be positive.\n");
+                    return 1;
+                }
+                break;
+            case 'h':
+                print_usage(argv[0]);
+                return 0;
+            default: /* '?' */
+                print_usage(argv[0]);
+                return 1;
         }
     }
 
-    /* Set up signal handler for clean shutdown */
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
+    // --- Set up Signal Handling ---
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = signal_handler;
+    sigaction(SIGINT, &sa, NULL);  // Handle Ctrl+C
+    sigaction(SIGTERM, &sa, NULL); // Handle termination signal
 
-    /* Initialize the library */
+    // --- Initialize Library ---
     printf("Initializing power monitor...\n");
-    error = pm_init(&handle);
+    error = pm_init(&g_handle); // Use global handle
     if (error != PM_SUCCESS) {
         fprintf(stderr, "Error initializing power monitor: %s\n", pm_error_string(error));
         return 1;
     }
+    printf("Initialization successful.\n");
 
-    /* Set the global handle for the signal handler */
-    g_handle = handle;
-
-    /* Get the number of sensors */
-    int sensor_count;
-    error = pm_get_sensor_count(handle, &sensor_count);
-    if (error != PM_SUCCESS) {
-        fprintf(stderr, "Error getting sensor count: %s\n", pm_error_string(error));
-        pm_cleanup(handle);
-        return 1;
-    }
-
-    printf("Found %d power sensors\n", sensor_count);
-
-    /* Set the sampling frequency */
+    // --- Set Frequency ---
     printf("Setting sampling frequency to %d Hz...\n", sampling_frequency);
-    error = pm_set_sampling_frequency(handle, sampling_frequency);
+    error = pm_set_sampling_frequency(g_handle, sampling_frequency);
     if (error != PM_SUCCESS) {
         fprintf(stderr, "Error setting sampling frequency: %s\n", pm_error_string(error));
-        pm_cleanup(handle);
+        pm_cleanup(g_handle); // Cleanup before exiting
         return 1;
     }
 
-    /* Start sampling */
-    printf("Starting power monitoring...\n");
-    error = pm_start_sampling(handle);
+    // --- Initialize ncurses ---
+    setlocale(LC_ALL, ""); // Support UTF-8 etc.
+    initscr();            // Start ncurses mode
+    cbreak();             // Disable line buffering
+    noecho();             // Don't echo input chars
+    keypad(stdscr, TRUE); // Enable F-keys, arrows etc.
+    curs_set(0);          // Hide cursor
+    timeout(0);           // Make getch() non-blocking
+
+    // --- Start Sampling Thread ---
+    printf("Starting power monitoring...\n"); // This message might be overwritten by ncurses
+    error = pm_start_sampling(g_handle);
     if (error != PM_SUCCESS) {
+        endwin(); // Restore terminal before printing error
         fprintf(stderr, "Error starting power monitoring: %s\n", pm_error_string(error));
-        pm_cleanup(handle);
+        pm_cleanup(g_handle);
         return 1;
     }
 
-    /* Allocate memory for power data and statistics */
-    pm_power_data_t data;
-    data.sensors = NULL;
+    // --- Main Monitoring Loop ---
+    struct timespec start_ts, current_ts;
+    clock_gettime(CLOCK_MONOTONIC, &start_ts);
+    double elapsed_seconds = 0;
+    useconds_t update_interval_us = update_interval_ms * 1000;
 
-    pm_power_stats_t stats;
-    stats.sensors = NULL;
+    while (!g_terminate_flag) {
+        // Calculate elapsed time
+        clock_gettime(CLOCK_MONOTONIC, &current_ts);
+        elapsed_seconds = (current_ts.tv_sec - start_ts.tv_sec) +
+                          (current_ts.tv_nsec - start_ts.tv_nsec) / 1e9;
 
-    /* Monitor for the specified duration */
-    printf("Monitoring power for %d seconds...\n", duration);
-    for (int i = 0; i < duration; i++) {
-        /* Sleep for 1 second */
-        sleep(1);
-
-        /* Get the latest power data */
-        error = pm_get_latest_data(handle, &data);
-        if (error != PM_SUCCESS) {
-            fprintf(stderr, "Error getting power data: %s\n", pm_error_string(error));
-            continue;
+        // Check duration limit
+        if (duration > 0 && elapsed_seconds >= duration) {
+            break; // Exit loop if duration reached
         }
 
-        /* Print the power data */
-        print_power_data(&data);
+        // Draw the UI
+        draw_ui(g_handle, sampling_frequency, elapsed_seconds);
 
-        /* Get the power statistics */
-        if (i > 0 && i % 5 == 0) {
-            error = pm_get_statistics(handle, &stats);
-            if (error != PM_SUCCESS) {
-                fprintf(stderr, "Error getting power statistics: %s\n", pm_error_string(error));
-                continue;
-            }
-
-            /* Print the power statistics */
-            print_power_stats(&stats);
-
-            /* Reset the statistics if this is half-way through */
-            if (i == duration / 2) {
-                printf("Resetting statistics...\n");
-                error = pm_reset_statistics(handle);
-                if (error != PM_SUCCESS) {
-                    fprintf(stderr, "Error resetting statistics: %s\n", pm_error_string(error));
-                }
-            }
+        // Check for user input ('q' to quit)
+        int ch = getch(); // Read char (non-blocking due to timeout(0))
+        if (ch == 'q' || ch == 'Q') {
+            break; // Exit loop on 'q'
         }
+
+        // Sleep for the update interval
+        usleep(update_interval_us);
     }
 
-    /* Stop sampling */
-    printf("Stopping power monitoring...\n");
-    error = pm_stop_sampling(handle);
-    if (error != PM_SUCCESS) {
-        fprintf(stderr, "Error stopping power monitoring: %s\n", pm_error_string(error));
+    // --- Stop Sampling ---
+    // Print message *before* endwin if possible, though it might get cleared.
+    // move(LINES - 1, 0); // Move cursor to last line
+    // printw("Stopping sampling...");
+    // refresh(); // Show stopping message briefly
+    error = pm_stop_sampling(g_handle);
+    if (error != PM_SUCCESS && error != PM_ERROR_NOT_RUNNING) { // Ignore error if already stopped
+         // Need to end ncurses before printing error to stderr
+         endwin();
+         fprintf(stderr, "Warning: Error stopping power monitoring: %s\n", pm_error_string(error));
+         // Continue to cleanup
     }
 
-    /* Get the final power statistics */
-    error = pm_get_statistics(handle, &stats);
-    if (error != PM_SUCCESS) {
-        fprintf(stderr, "Error getting power statistics: %s\n", pm_error_string(error));
-    } else {
-        /* Print the power statistics */
-        print_power_stats(&stats);
-    }
+    // --- Cleanup ncurses ---
+    endwin(); // Restore terminal settings *before* final prints/exit
 
-    /* Clean up */
-    printf("Cleaning up...\n");
-    if (data.sensors) free(data.sensors);
-    if (stats.sensors) free(stats.sensors);
-
-    error = pm_cleanup(handle);
+    // --- Final Cleanup (C Library) ---
+    printf("Cleaning up resources...\n");
+    error = pm_cleanup(g_handle);
     if (error != PM_SUCCESS) {
         fprintf(stderr, "Error cleaning up: %s\n", pm_error_string(error));
-        return 1;
+        return 1; // Return error code if cleanup fails
     }
 
-    printf("Power monitoring completed successfully.\n");
-    return 0;
+    printf("Power monitoring stopped.\n");
+    if (duration > 0 && elapsed_seconds < duration && g_terminate_flag) {
+        printf("Monitoring interrupted by signal after %.1f seconds.\n", elapsed_seconds);
+    } else if (duration > 0) {
+         printf("Monitoring completed after %d seconds.\n", duration);
+    } else {
+         printf("Monitoring stopped after %.1f seconds.\n", elapsed_seconds);
+    }
+
+    return 0; // Success
 }

@@ -4,12 +4,12 @@ help:
 
 .PHONY: build
 build: ## Build the project
-	cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON
+	cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON -DBUILD_CLI=ON
 	cmake --build build -j $(nproc)
 
 .PHONY: build-debug
 build-debug: ## Build the project in debug mode
-	cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON -DSHOW_ALL=ON -DBUILD_TESTS=ON
+	cmake -B build -S . -DCMAKE_BUILD_TYPE=Debug -DBUILD_EXAMPLES=ON -DSHOW_ALL=ON -DBUILD_TESTS=ON -DBUILD_CLI=ON
 	cmake --build build -j $(nproc)
 
 .PHONY: test-c
