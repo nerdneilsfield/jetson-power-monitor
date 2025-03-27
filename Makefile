@@ -45,21 +45,24 @@ test-python: ## Run the tests
 
 .PHONY: copy-rust
 copy-rust: ## Copy the rust project
-	cp -r include/jetpwmon/jetpwmon.h bindings/rust/vendor/include/jetpwmon/
-	cp -r src/jetpwmon.c bindings/rust/vendor/src/
-	cp -r LICENSE bindings/rust/
-	cp -r README.md bindings/rust/
+	@mkdir -p bindings/rust/vendor/include/jetpwmon
+	@mkdir -p bindings/rust/vendor/src
+	@cp -r include/jetpwmon/jetpwmon.h bindings/rust/vendor/include/jetpwmon/
+	@cp -r src/jetpwmon.c bindings/rust/vendor/src/
+	@cp -r LICENSE bindings/rust/
+	@cp -r README.md bindings/rust/
+	@echo "Rust project copied to bindings/rust/vendor"
 
 .PHONY: build-rust
 build-rust: copy-rust ## Build the rust project
 	cd bindings/rust && cargo build
 
 .PHONY: test-rust
-test-rust: ## Run the tests
+test-rust: copy-rust ## Run the tests
 	cd bindings/rust && cargo test
 
 .PHONY: example-rust
-example-rust: ## Run the examples
+example-rust: copy-rust ## Run the examples
 	cd bindings/rust && cargo run --example matrix_multiply
 
 test: test-rust test-python test-c ## Run all tests 
