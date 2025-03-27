@@ -258,7 +258,7 @@ private:
     pm_handle_t handle_; ///< Handle to the power monitor instance
 };
 
-PYBIND11_MODULE(jetpwmon, m) {
+PYBIND11_MODULE(_core, m) {
     m.doc() = "Python bindings for Jetson Power Monitor";
 
     py::class_<PowerMonitor>(m, "PowerMonitor")
