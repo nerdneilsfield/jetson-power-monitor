@@ -1,6 +1,6 @@
 [build-system]
-requires = ["scikit-build-core", "pybind11"]
-build-backend = "scikit_build_core.build"
+requires = ["pybind11", "setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "jetpwmon"
@@ -12,7 +12,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.7"
 keywords = ["jetson", "power", "monitor", "nvidia", "nvidia-jetson", "jetson-power-monitor"]
-dependencies = ["pybind11>=2.9.0", "scikit-build-core>=0.1.0"]
+dependencies = ["pybind11>=2.9.0"]
 
 [project.optional-dependencies]
 dev = [
@@ -22,16 +22,6 @@ dev = [
     "pyyaml>=6.0.2",
     "lark>=1.2.2"
 ]
-
-
-[tool.scikit-build.cmake]
-verbose = true
-[tool.scikit-build.cmake.define]
-BUILD_PYTHON_BINDINGS = "ON"
-BUILD_TESTS = "OFF"
-BUILD_CLI = "ON"
-SKBUILD="ON"
-CMAKE_BUILD_TYPE = "Release"
 
 # cibuildwheel specific configuration
 [tool.cibuildwheel]
