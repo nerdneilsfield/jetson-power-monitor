@@ -22,11 +22,14 @@ dev = [
     "pyyaml>=6.0.2",
     "lark>=1.2.2"
 ]
+cli = [
+    "rich>=13.9.4"
+]
 
 # cibuildwheel specific configuration
 [tool.cibuildwheel]
 # Dependencies to install before building
-before-build = "pip install pybind11 scikit-build-core"
+before-build = "pip install pybind11 setuptools wheel"
 # Test command - if testing is desired
 test-command = "python -c \"import jetpwmon; print(dir(jetpwmon))\""
 # Skip tests - may be slow on emulators
