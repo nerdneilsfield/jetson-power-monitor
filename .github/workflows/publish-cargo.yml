@@ -28,8 +28,8 @@ jobs:
           mkdir -p vendor/src
           cp -r ../../include/jetpwmon/jetpwmon.h vendor/include/jetpwmon/
           cp -r ../../src/jetpwmon.c vendor/src/
-          cp -r ../../LICENSE
-          cp -r ../../README.md
+          cp -r ../../LICENSE .
+          cp -r ../../README.md .
           cargo package --no-verify --allow-dirty
 
       - name: Publish crate
