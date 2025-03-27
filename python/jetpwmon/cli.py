@@ -99,7 +99,7 @@ def generate_table(
     """Generates the rich Table object with current power data."""
     table = Table(title=None, show_header=True, header_style="bold magenta")
 
-    # Define columns
+    # Define columns (no change needed here)
     table.add_column("Sensor Name", style="dim cyan", width=18)
     table.add_column("Power (W)", justify="right", style="green")
     table.add_column("Voltage (V)", justify="right")
@@ -108,76 +108,64 @@ def generate_table(
     table.add_column("Status", justify="left")
 
     try:
-        # Get the latest data from the monitor
-        data = (
-            monitor.get_latest_data()
-        )  # Assumes this returns object with .total, .sensors, .sensor_count
+        # Get the latest data from the monitor - THIS RETURNS A DICT
+        data_dict = monitor.get_latest_data() # Changed variable name for clarity
 
         # Calculate elapsed time
         elapsed_sec = time.monotonic() - start_time
 
-        # Update table title/caption with dynamic info
+        # Update table title/caption
         table.title = (
             f"Jetson Power Monitor [Sampling: {sampling_freq} Hz | "
             f"Elapsed: {elapsed_sec:.1f} s] (Press 'Ctrl+C' to quit)"
         )
 
-        # Add Total row
-        total = data.total  # Assuming data.total has .name, .power etc attributes
+        # --- FIX: Use dictionary access ---
+        # Use .get() with defaults for safer access in case keys are missing
+        total_data = data_dict.get('total', {})
         table.add_row(
-            (
-                total.name if hasattr(total, "name") else "Total"
-            ),  # Use name from struct if available
-            f"{total.power:.2f}" if hasattr(total, "power") else "N/A",
-            f"{total.voltage:.2f}" if hasattr(total, "voltage") else "N/A",
-            f"{total.current:.2f}" if hasattr(total, "current") else "N/A",
-            "Yes" if getattr(total, "online", False) else "No",
-            getattr(total, "status", "N/A"),
+            total_data.get('name', "Total"),
+            f"{total_data.get('power', float('nan')):.2f}", # float('nan') ensures formatting doesn't fail
+            f"{total_data.get('voltage', float('nan')):.2f}",
+            f"{total_data.get('current', float('nan')):.2f}",
+            "Yes" if total_data.get('online', False) else "No",
+            total_data.get('status', "N/A"),
         )
-        table.add_section()  # Add a line separator
+        table.add_section()
 
-        # Add rows for individual sensors
-        # Assuming data.sensors is a list-like object or we use data.sensor_count
-        sensors = data.sensors if hasattr(data, "sensors") else []
-        sensor_count = (
-            data.sensor_count if hasattr(data, "sensor_count") else len(sensors)
-        )
+        sensors_list = data_dict.get('sensors', [])
+        sensor_count = data_dict.get('sensor_count', 0) # Though len(sensors_list) might be more direct
 
-        if sensors and sensor_count > 0:
-            # Ensure we don't access beyond list bounds if sensors is a list
-            num_to_iterate = min(sensor_count, len(sensors))
-            for i in range(num_to_iterate):
-                sensor = sensors[
-                    i
-                ]  # Assuming list access or pointer access handled by pybind11 wrapper
+        if sensors_list and sensor_count > 0:
+            # Iterate over the list of sensor dictionaries
+            for sensor_dict in sensors_list:
                 table.add_row(
-                    getattr(sensor, "name", f"Sensor {i}"),
-                    f"{sensor.power:.2f}" if hasattr(sensor, "power") else "N/A",
-                    f"{sensor.voltage:.2f}" if hasattr(sensor, "voltage") else "N/A",
-                    f"{sensor.current:.2f}" if hasattr(sensor, "current") else "N/A",
-                    "Yes" if getattr(sensor, "online", False) else "No",
-                    getattr(sensor, "status", "N/A"),
+                    sensor_dict.get('name', "Unknown"),
+                    f"{sensor_dict.get('power', float('nan')):.2f}",
+                    f"{sensor_dict.get('voltage', float('nan')):.2f}",
+                    f"{sensor_dict.get('current', float('nan')):.2f}",
+                    "Yes" if sensor_dict.get('online', False) else "No",
+                    sensor_dict.get('status', "N/A"),
                 )
         else:
             table.add_row("No individual sensor data available.", "", "", "", "", "")
+        # --- END FIX ---
 
     except RuntimeError as e:
-        # Handle errors from the C++ library (e.g., device disconnected)
+        # Handle errors from the C++ library during data fetch
         console = Console()
-        console.print(f"[bold red]Error getting data:[/bold red] {e}")
-        # Return the existing table or an empty one to avoid crashing Live
-        # Or maybe add an error row to the table?
+        # Avoid printing directly if inside Live context? Rich might handle this.
+        # For now, add error row to table.
         table.add_row("[bold red]Error getting data[/bold red]", str(e), "", "", "", "")
 
     except Exception as e:
-        # Handle other unexpected errors
+        # Handle other unexpected errors during table generation
         console = Console()
-        console.print(f"[bold red]Unexpected error:[/bold red] {e}")
+        # Avoid printing directly if inside Live context?
         table.add_row("[bold red]Unexpected error[/bold red]", str(e), "", "", "", "")
 
+
     return table
-
-
 # --- Main Execution ---
 def run_cli():
     """Main function for the CLI application."""
