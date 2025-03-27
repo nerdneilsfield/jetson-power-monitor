@@ -3,7 +3,7 @@ name: Publish Rust Crate
 on:
   push:
     tags:
-      - 'v*'  # Triggered when pushing version tags, such as v0.1.0
+      - 'v*'  # Triggered when pushing version tags, such as v0.1.1
   workflow_dispatch:  # Allow manual triggering
 
 jobs:
@@ -23,7 +23,12 @@ jobs:
 
       - name: Verify crate
         working-directory: bindings/rust  # Directory already correctly specified
-        run: cargo package --no-verify
+        run: |
+          cp -r ../../include/jetpwmon/jetpwmon.h vendor/include/jetpwmon/
+          cp -r ../../src/jetpwmon.c vendor/src/
+          cp -r ../../LICENSE vendor/
+          cp -r ../../README.md vendor/
+          cargo package --no-verify
 
       - name: Publish crate
         working-directory: bindings/rust  # Directory already correctly specified
