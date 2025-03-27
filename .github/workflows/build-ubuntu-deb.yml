@@ -105,6 +105,8 @@ jobs:
           sudo apt-get install -y libncurses-dev:arm64
           # Add any other required :arm64 dependencies here, e.g.:
           # sudo apt-get install -y zlib1g-dev:arm64 libssl-dev:arm64 ...
+          echo "Checking libncurses-dev:arm64 installation paths..."
+          dpkg -L libncurses-dev:arm64 | grep -E 'include|lib.*\.so'
 
           # Set up CMake toolchain environment variable (if your toolchain file needs it)
           echo "CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/.github/toolchain-arm64.cmake" >> $GITHUB_ENV
@@ -112,8 +114,11 @@ jobs:
       # Build and package
       - name: Configure CMake
         run: |
+          echo "Clearing old CMake cache..."
+          rm -rf build
           mkdir -p build
           cd build
+          echo "Running CMake configuration..."
           cmake ${{ env.CMAKE_ARGS }} \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DBUILD_PYTHON_BINDINGS=OFF \
