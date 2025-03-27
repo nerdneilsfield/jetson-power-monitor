@@ -92,20 +92,27 @@ import jetpwmon
 # Create a power monitor instance
 monitor = jetpwmon.PowerMonitor()
 
-# Get the current total power consumption, voltage, and current
+# Get the latest data snapshot
 try:
-    power = monitor.get_power_consumption()
-    voltage = monitor.get_voltage()
-    current = monitor.get_current()
-
-    print(f"Current total power consumption: {power:.2f} W")
-    print(f"Current bus voltage: {voltage:.2f} V")
-    print(f"Current total current: {current:.2f} A")
+    data = monitor.get_latest_data()
+    
+    # Access total readings
+    total = data['total']
+    print(f"Current total power consumption: {total['power']:.2f} W")
+    print(f"Current bus voltage: {total['voltage']:.2f} V")
+    print(f"Current total current: {total['current']:.2f} A")
+    
+    # Access individual sensor readings
+    print("\nIndividual Sensor Readings:")
+    for sensor in data['sensors']:
+        print(f"Sensor {sensor['name']}:")
+        print(f"  Power: {sensor['power']:.2f} W")
+        print(f"  Voltage: {sensor['voltage']:.2f} V")
+        print(f"  Current: {sensor['current']:.2f} A")
 
 except Exception as e:
     print(f"Error reading power metrics: {e}")
     print("Ensure the INA3221 device is connected and accessible (permissions?).")
-
 ```
 
 <br/>

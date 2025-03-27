@@ -93,20 +93,27 @@ import jetpwmon
 # 创建一个电源监控实例
 monitor = jetpwmon.PowerMonitor()
 
-# 获取当前的总功耗、电压和电流
+# 获取最新的数据快照
 try:
-    power = monitor.get_power_consumption()
-    voltage = monitor.get_voltage()
-    current = monitor.get_current()
-
-    print(f"当前的总功耗：{power:.2f} W")
-    print(f"当前的总线电压：{voltage:.2f} V")
-    print(f"当前的总电流：{current:.2f} A")
+    data = monitor.get_latest_data()
+    
+    # 访问总体读数
+    total = data['total']
+    print(f"当前的总功耗：{total['power']:.2f} W")
+    print(f"当前的总线电压：{total['voltage']:.2f} V")
+    print(f"当前的总电流：{total['current']:.2f} A")
+    
+    # 访问各个传感器的读数
+    print("\n各个传感器的读数：")
+    for sensor in data['sensors']:
+        print(f"传感器 {sensor['name']}：")
+        print(f"  功率：{sensor['power']:.2f} W")
+        print(f"  电压：{sensor['voltage']:.2f} V")
+        print(f"  电流：{sensor['current']:.2f} A")
 
 except Exception as e:
     print(f"读取功率指标时出错：{e}")
     print("请确保 INA3221 设备已连接并可访问（权限？）。")
-
 ```
 
 <br/>
@@ -772,40 +779,41 @@ int main() {
 #include <stdexcept> // 用于std::runtime_error
 #include <cstring>   // 用于strnlen
 
-// 安全地将C字符数组（可能不是null结尾的）转换为std::string的辅助函数
+// 辅助函数：安全地将 C 字符数组（可能未以 null 结尾）转换为 std::string
 std::string c_char_to_string(const char* c_str, size_t max_len) {
-    // 查找字符串的实际长度或停止在max_len
+    // 找到字符串的实际长度或在 max_len 处停止
     size_t len = strnlen(c_str, max_len);
     return std::string(c_str, len);
 }
 
 int main() {
     try {
-        // 1. 初始化：创建PowerMonitor对象。
-        // 构造函数处理pm_init()并在失败时抛出std::runtime_error。
+        // 1. 初始化：创建 PowerMonitor 对象
+        // 构造函数处理 pm_init() 并在失败时抛出 std::runtime_error
         jetpwmon::PowerMonitor monitor;
         std::cout << "电源监控器初始化成功（RAII）。" << std::endl;
 
-        // 2. 获取最新数据：返回一个jetpwmon::PowerData对象。
-        // 这个对象持有数据快照。
-        jetpwmon::PowerData data = monitor.getLatestData(); // 抛出C API错误
+        // 2. 获取最新数据：返回一个 jetpwmon::PowerData 对象
+        // 该对象保存数据快照
+        jetpwmon::PowerData data = monitor.getLatestData(); // C API 错误时抛出异常
 
         // 3. 访问并打印总体读数
-        // 使用getTotal()方法，它返回一个const引用指向C结构体。
+        // 使用 getTotal() 方法，它返回 C 结构体的常量引用
         const pm_sensor_data_t& total_data = data.getTotal();
         std::cout << "\n--- 总体读数 ---" << std::endl;
-        std::cout << "总功率  : " << total_data.power << " W" << std::endl;
-        std::cout << "总线电压  : " << total_data.voltage << " V" << std::endl;
-        std::cout << "总电流  : " << total_data.current << " A" << std::endl;
-        // 安全地转换C字符数组状态字段
-        std::cout << "状态       : " << c_char_to_string(total_data.status, sizeof(total_data.status)) << std::endl;
+        std::cout << "总功率：" << total_data.power << " W" << std::endl;
+        std::cout << "总线电压：" << total_data.voltage << " V" << std::endl;
+        std::cout << "总电流：" << total_data.current << " A" << std::endl;
+        // 安全地转换 C 字符数组状态字段
+        std::cout << "状态：" << c_char_to_string(total_data.status, sizeof(total_data.status)) << std::endl;
 
-        // 4. 访问并打印个体传感器读数
-        std::cout << "\n--- 个体传感器读数 ---" << std::endl;
-        const pm_sensor_data_t* sensors_ptr = data.getSensors(); // 获取原始C指针
+        // 4. 访问并打印各个传感器的读数
+        std::cout << "\n--- 各个传感器的读数 ---" << std::endl;
+        const pm_sensor_data_t* sensors_ptr = data.getSensors(); // 获取原始 C 指针
         int sensor_count = data.getSensorCount();
 
-        // 安全注意：从getSensors()获取的指针指向由基础C库管理的内存，假设只在短时间内有效。请及时访问。
+        // 安全性注意：从 getSensors() 获取的指针指向由底层 C 库管理的内存，
+        // 假定仅暂时有效。请及时访问。
         if (sensors_ptr != nullptr && sensor_count > 0) {
             for (int i = 0; i < sensor_count; ++i) {
                 const pm_sensor_data_t& sensor = sensors_ptr[i]; // 通过指针访问

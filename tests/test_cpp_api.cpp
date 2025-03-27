@@ -214,30 +214,34 @@ TEST_F(JetPwMonCPPAPITest, StatisticsCollection)
         }) << "Test setup failed during PowerMonitor creation";
 }
 
-// Test case: Sensor information retrieval (count and names) using C++ API
-TEST_F(JetPwMonCPPAPITest, SensorInfo)
-{
+// Test case: Getting sensor information
+TEST_F(JetPwMonCPPAPITest, SensorInfo) {
         ASSERT_NO_THROW({
                 jetpwmon::PowerMonitor monitor;
-                int count = -1;
-                std::vector<std::string> names;
-
-                // Get sensor count
-                ASSERT_NO_THROW(count = monitor.getSensorCount()) << "getSensorCount threw unexpectedly.";
+                int count = monitor.getSensorCount();
                 EXPECT_GE(count, 0) << "Sensor count should be non-negative.";
 
-                // Get sensor names (wrapper handles complexity)
-                ASSERT_NO_THROW(names = monitor.getSensorNames()) << "getSensorNames threw unexpectedly.";
+                // Test deprecated get_sensor_names function
+                #pragma warning(push)
+                #pragma warning(disable: 4996)  // Disable deprecation warning for test
+                std::vector<std::string> names = monitor.getSensorNames();
+                #pragma warning(pop)
+                
+                EXPECT_EQ(names.size(), static_cast<size_t>(count)) << "Number of names should match sensor count.";
+                for (const auto& name : names) {
+                        EXPECT_FALSE(name.empty()) << "Sensor name should not be empty.";
+                }
 
-                // Verify count matches vector size
-                EXPECT_EQ(static_cast<size_t>(count), names.size()) << "Count from getSensorCount() doesn't match size of vector from getSensorNames().";
-
-                // Check if names are non-empty (assuming sensors should have names)
-                if (count > 0)
-                {
-                        for (const auto &name : names)
-                        {
-                                EXPECT_FALSE(name.empty()) << "Retrieved sensor name is empty.";
+                // Test getting sensor names through get_latest_data (recommended way)
+                jetpwmon::PowerData data = monitor.getLatestData();
+                EXPECT_EQ(data.getSensorCount(), count) << "Sensor count mismatch between direct query and data.";
+                
+                const pm_sensor_data_t* sensors = data.getSensors();
+                if (count > 0) {
+                        ASSERT_NE(nullptr, sensors) << "Sensors pointer should not be null when count > 0.";
+                        for (int i = 0; i < count; i++) {
+                                std::string name = c_char_to_string(sensors[i].name, sizeof(sensors[i].name));
+                                EXPECT_FALSE(name.empty()) << "Sensor name from data should not be empty.";
                         }
                 }
         }) << "Test setup failed during PowerMonitor creation";

@@ -18,8 +18,8 @@ PowerStats::PowerStats(const pm_power_stats_t& stats)
     // Copy total stats
     std::memcpy(&total_, &stats.total, sizeof(pm_sensor_stats_t));
     
-    // Allocate and copy sensor data
-    if (sensor_count_ > 0) {
+    // Deep copy sensor data from internal buffer
+    if (sensor_count_ > 0 && stats.sensors != nullptr) {
         sensors_ = new pm_sensor_stats_t[sensor_count_];
         for (int i = 0; i < sensor_count_; i++) {
             // Deep copy each sensor's data
@@ -66,8 +66,8 @@ PowerData::PowerData(const pm_power_data_t& data)
     // Copy total data
     std::memcpy(&total_, &data.total, sizeof(pm_sensor_data_t));
     
-    // Allocate and copy sensor data
-    if (sensor_count_ > 0) {
+    // Deep copy sensor data from internal buffer
+    if (sensor_count_ > 0 && data.sensors != nullptr) {
         sensors_ = new pm_sensor_data_t[sensor_count_];
         for (int i = 0; i < sensor_count_; i++) {
             // Deep copy each sensor's data
@@ -203,11 +203,13 @@ int PowerMonitor::getSensorCount() const {
     return count;
 }
 
+[[deprecated("This function is unsafe and will be removed in a future version. "
+             "Please use getLatestData() or getStatistics() instead to access sensor names.")]]
 std::vector<std::string> PowerMonitor::getSensorNames() const {
     int count = getSensorCount();
     std::vector<char*> names(count);
     for (int i = 0; i < count; ++i) {
-        names[i] = new char[64];
+        names[i] = new char[64];  // 使用固定大小的缓冲区，与 pm_sensor_data_t 中的 name 字段大小一致
     }
 
     pm_error_t error = pm_get_sensor_names(*handle_.get(), names.data(), &count);
@@ -219,6 +221,7 @@ std::vector<std::string> PowerMonitor::getSensorNames() const {
     }
 
     std::vector<std::string> result;
+    result.reserve(count);
     for (int i = 0; i < count; ++i) {
         result.push_back(names[i]);
         delete[] names[i];

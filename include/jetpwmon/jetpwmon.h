@@ -175,8 +175,15 @@ pm_error_t pm_is_sampling(pm_handle_t handle, bool* is_sampling);
 /**
  * @brief Get the latest power data
  *
+ * This function returns the latest power data by setting the sensors pointer
+ * in the output structure to point to the library's internal buffer.
+ * The caller must NOT free or modify the sensors pointer, as it points to
+ * internal memory managed by the library. The pointer is only valid until
+ * the next call to this function or pm_cleanup().
+ *
  * @param handle Library handle
- * @param[out] data Pointer to store the data
+ * @param[out] data Pointer to store the data. The sensors pointer in this
+ *                  structure will be set to point to internal memory.
  * @return Error code
  */
 pm_error_t pm_get_latest_data(pm_handle_t handle, pm_power_data_t* data);
@@ -184,8 +191,15 @@ pm_error_t pm_get_latest_data(pm_handle_t handle, pm_power_data_t* data);
 /**
  * @brief Get the power statistics
  *
+ * This function returns the power statistics by setting the sensors pointer
+ * in the output structure to point to the library's internal buffer.
+ * The caller must NOT free or modify the sensors pointer, as it points to
+ * internal memory managed by the library. The pointer is only valid until
+ * the next call to this function or pm_cleanup().
+ *
  * @param handle Library handle
- * @param[out] stats Pointer to store the statistics
+ * @param[out] stats Pointer to store the statistics. The sensors pointer in this
+ *                   structure will be set to point to internal memory.
  * @return Error code
  */
 pm_error_t pm_get_statistics(pm_handle_t handle, pm_power_stats_t* stats);

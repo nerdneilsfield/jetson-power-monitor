@@ -364,23 +364,20 @@ pm_error_t pm_get_latest_data(pm_handle_t handle, pm_power_data_t *data)
         /* Lock the mutex to read the data */
         pthread_mutex_lock(&handle->data_mutex);
 
+        /* Check internal buffer validity */
+        if (handle->sensor_count > 0 && handle->latest_data.sensors == NULL)
+        {
+                fprintf(stderr, "[jetpwmon] Internal Error: Sensor count %d but internal buffer handle->latest_data.sensors is NULL.\n", handle->sensor_count);
+                pthread_mutex_unlock(&handle->data_mutex);
+                return PM_ERROR_MEMORY;
+        }
+
         /* Copy the total data */
         data->total = handle->latest_data.total;
         data->sensor_count = handle->sensor_count;
 
-        /* Allocate memory for the sensors if needed */
-        if (!data->sensors)
-        {
-                data->sensors = (pm_sensor_data_t *)malloc(handle->sensor_count * sizeof(pm_sensor_data_t));
-                if (!data->sensors)
-                {
-                        pthread_mutex_unlock(&handle->data_mutex);
-                        return PM_ERROR_MEMORY;
-                }
-        }
-
-        /* Copy the sensor data */
-        memcpy(data->sensors, handle->latest_data.sensors, handle->sensor_count * sizeof(pm_sensor_data_t));
+        /* Point to internal buffer */
+        data->sensors = handle->latest_data.sensors;
 
         pthread_mutex_unlock(&handle->data_mutex);
         return PM_SUCCESS;
@@ -402,23 +399,20 @@ pm_error_t pm_get_statistics(pm_handle_t handle, pm_power_stats_t *stats)
         /* Lock the mutex to read the statistics */
         pthread_mutex_lock(&handle->data_mutex);
 
+        /* Check internal buffer validity */
+        if (handle->sensor_count > 0 && handle->statistics.sensors == NULL)
+        {
+                fprintf(stderr, "[jetpwmon] Internal Error: Sensor count %d but internal buffer handle->statistics.sensors is NULL.\n", handle->sensor_count);
+                pthread_mutex_unlock(&handle->data_mutex);
+                return PM_ERROR_MEMORY;
+        }
+
         /* Copy the total statistics */
         stats->total = handle->statistics.total;
         stats->sensor_count = handle->sensor_count;
 
-        /* Allocate memory for the sensors if needed */
-        if (!stats->sensors)
-        {
-                stats->sensors = (pm_sensor_stats_t *)malloc(handle->sensor_count * sizeof(pm_sensor_stats_t));
-                if (!stats->sensors)
-                {
-                        pthread_mutex_unlock(&handle->data_mutex);
-                        return PM_ERROR_MEMORY;
-                }
-        }
-
-        /* Copy the sensor statistics */
-        memcpy(stats->sensors, handle->statistics.sensors, handle->sensor_count * sizeof(pm_sensor_stats_t));
+        /* Point to internal buffer */
+        stats->sensors = handle->statistics.sensors;
 
         pthread_mutex_unlock(&handle->data_mutex);
         return PM_SUCCESS;
@@ -468,6 +462,10 @@ pm_error_t pm_get_sensor_count(pm_handle_t handle, int *count)
 }
 
 /* Get the sensor names */
+#ifdef __GNUC__
+__attribute__((deprecated("This function is unsafe and will be removed in a future version. "
+                         "Please use pm_get_latest_data() or pm_get_statistics() instead to access sensor names.")))
+#endif
 pm_error_t pm_get_sensor_names(pm_handle_t handle, char **names, int *count)
 {
         if (!handle || !handle->initialized)
@@ -488,10 +486,16 @@ pm_error_t pm_get_sensor_names(pm_handle_t handle, char **names, int *count)
 
         *count = handle->sensor_count;
 
-        /* Copy the sensor names */
+        /* Copy the sensor names with explicit size limit */
         for (int i = 0; i < handle->sensor_count; i++)
         {
-                strncpy(names[i], handle->sensor_names[i], strlen(handle->sensor_names[i]) + 1);
+                if (!names[i]) {
+                        fprintf(stderr, "[jetpwmon] Warning: names[%d] is NULL\n", i);
+                        continue;
+                }
+                /* Assume maximum safe buffer size of 64 (same as in pm_sensor_data_t) */
+                strncpy(names[i], handle->sensor_names[i], 63);
+                names[i][63] = '\0';  /* Ensure null termination */
         }
 
         return PM_SUCCESS;
@@ -744,6 +748,8 @@ static pm_error_t find_all_system_monitor(pm_handle_t handle)
         char local_path[1024];  /* Increased from 512 */
         char path_type[1024];  /* Increased from 512 */
         char path_name[1024];  /* Increased from 512 */
+        char voltage_path[1024];  /* New buffer for voltage path */
+        char current_path[1024];  /* New buffer for current path */
         char buffer[256];
         FILE *fp;
 
@@ -822,8 +828,10 @@ static pm_error_t find_all_system_monitor(pm_handle_t handle)
                 }
 
                 /* Check for required files for a power sensor */
-                bool has_voltage = check_file_exists(strcat(strcpy(buffer, local_path), "/voltage_now"));
-                bool has_current = check_file_exists(strcat(strcpy(buffer, local_path), "/current_now"));
+                snprintf(voltage_path, sizeof(voltage_path), "%s/voltage_now", local_path);
+                snprintf(current_path, sizeof(current_path), "%s/current_now", local_path);
+                bool has_voltage = check_file_exists(voltage_path);
+                bool has_current = check_file_exists(current_path);
 
                 /* Only add sensor if it has both voltage and current capabilities */
                 if (has_voltage && has_current)

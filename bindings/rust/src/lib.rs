@@ -78,8 +78,8 @@ pub struct SensorStats {
 pub struct PowerData {
     /// Total power consumption
     pub total: SensorData,
-    /// Array of sensor data
-    pub sensors: *mut SensorData,
+    /// Array of sensor data - Points to internal library buffer, do not free
+    pub sensors: *const SensorData,
     /// Number of sensors
     pub sensor_count: i32,
 }
@@ -90,8 +90,8 @@ pub struct PowerData {
 pub struct PowerStats {
     /// Total power statistics
     pub total: SensorStats,
-    /// Array of sensor statistics
-    pub sensors: *mut SensorStats,
+    /// Array of sensor statistics - Points to internal library buffer, do not free
+    pub sensors: *const SensorStats,
     /// Number of sensors
     pub sensor_count: i32,
 }
@@ -269,12 +269,15 @@ impl PowerMonitor {
     /// 
     /// # Returns
     /// 
-    /// * `Ok(PowerData)` - Latest power data
+    /// * `Ok(PowerData)` - Latest power data. Note that the sensors pointer in the returned
+    ///                     structure points to internal library memory and should not be freed.
+    ///                     The pointer is only valid until the next call to this function
+    ///                     or until the PowerMonitor is dropped.
     /// * `Err(Error)` - An error code if getting data fails
     pub fn get_latest_data(&self) -> Result<PowerData, Error> {
         let mut data = PowerData {
             total: unsafe { std::mem::zeroed() },
-            sensors: std::ptr::null_mut(),
+            sensors: std::ptr::null(),
             sensor_count: 0,
         };
         let result = unsafe { pm_get_latest_data(self.handle.as_ptr(), &mut data) };
@@ -288,12 +291,15 @@ impl PowerMonitor {
     /// 
     /// # Returns
     /// 
-    /// * `Ok(PowerStats)` - Power statistics
+    /// * `Ok(PowerStats)` - Power statistics. Note that the sensors pointer in the returned
+    ///                      structure points to internal library memory and should not be freed.
+    ///                      The pointer is only valid until the next call to this function
+    ///                      or until the PowerMonitor is dropped.
     /// * `Err(Error)` - An error code if getting statistics fails
     pub fn get_statistics(&self) -> Result<PowerStats, Error> {
         let mut stats = PowerStats {
             total: unsafe { std::mem::zeroed() },
-            sensors: std::ptr::null_mut(),
+            sensors: std::ptr::null(),
             sensor_count: 0,
         };
         let result = unsafe { pm_get_statistics(self.handle.as_ptr(), &mut stats) };
@@ -338,17 +344,33 @@ impl PowerMonitor {
     /// 
     /// This function returns a vector of strings containing the names of all sensors.
     /// 
+    /// # Deprecated
+    /// 
+    /// This function is deprecated and will be removed in a future version.
+    /// Please use `get_latest_data()` or `get_statistics()` instead to access sensor names.
+    /// 
     /// # Returns
     /// 
     /// * `Ok(Vec<String>)` - Vector of sensor names
     /// * `Err(Error)` - An error code if getting sensor names fails
+    #[deprecated(
+        since = "1.1.0",
+        note = "This function is unsafe and will be removed in a future version. Please use get_latest_data() or get_statistics() instead."
+    )]
     pub fn get_sensor_names(&self) -> Result<Vec<String>, Error> {
         let count = self.get_sensor_count()?;
         let mut names = vec![std::ptr::null_mut(); count as usize];
         
-        // 为每个字符串分配内存
+        // 为每个字符串分配固定大小的缓冲区 (64字节，与 pm_sensor_data_t 中的 name 字段大小一致)
         for i in 0..count as usize {
             names[i] = unsafe { std::alloc::alloc(std::alloc::Layout::array::<i8>(64).unwrap()) as *mut i8 };
+            if names[i].is_null() {
+                // 清理已分配的内存
+                for j in 0..i {
+                    unsafe { std::alloc::dealloc(names[j] as *mut u8, std::alloc::Layout::array::<i8>(64).unwrap()) };
+                }
+                return Err(Error::Memory);
+            }
         }
         
         let mut count = count;
@@ -375,7 +397,7 @@ impl PowerMonitor {
             if !ptr.is_null() {
                 unsafe {
                     let cstr = CString::from_raw(ptr as *mut _);
-                    result.push(cstr.into_string().unwrap());
+                    result.push(cstr.into_string().unwrap_or_default());
                 }
             }
         }

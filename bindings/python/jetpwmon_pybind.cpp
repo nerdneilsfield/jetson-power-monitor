@@ -114,26 +114,32 @@ public:
 
         py::dict result;
         py::dict total;
+        total["name"] = std::string(data.total.name);
+        total["type"] = data.total.type;
         total["voltage"] = data.total.voltage;
         total["current"] = data.total.current;
         total["power"] = data.total.power;
         total["online"] = data.total.online;
         total["status"] = std::string(data.total.status);
+        total["warning_threshold"] = data.total.warning_threshold;
+        total["critical_threshold"] = data.total.critical_threshold;
         result["total"] = total;
 
         py::list sensors;
-        for (int i = 0; i < data.sensor_count; i++) {
-            py::dict sensor;
-            sensor["name"] = std::string(data.sensors[i].name);
-            sensor["type"] = data.sensors[i].type;
-            sensor["voltage"] = data.sensors[i].voltage;
-            sensor["current"] = data.sensors[i].current;
-            sensor["power"] = data.sensors[i].power;
-            sensor["online"] = data.sensors[i].online;
-            sensor["status"] = std::string(data.sensors[i].status);
-            sensor["warning_threshold"] = data.sensors[i].warning_threshold;
-            sensor["critical_threshold"] = data.sensors[i].critical_threshold;
-            sensors.append(sensor);
+        if (data.sensor_count > 0 && data.sensors != nullptr) {
+            for (int i = 0; i < data.sensor_count; i++) {
+                py::dict sensor;
+                sensor["name"] = std::string(data.sensors[i].name);
+                sensor["type"] = data.sensors[i].type;
+                sensor["voltage"] = data.sensors[i].voltage;
+                sensor["current"] = data.sensors[i].current;
+                sensor["power"] = data.sensors[i].power;
+                sensor["online"] = data.sensors[i].online;
+                sensor["status"] = std::string(data.sensors[i].status);
+                sensor["warning_threshold"] = data.sensors[i].warning_threshold;
+                sensor["critical_threshold"] = data.sensors[i].critical_threshold;
+                sensors.append(sensor);
+            }
         }
         result["sensors"] = sensors;
         result["sensor_count"] = data.sensor_count;
@@ -154,6 +160,7 @@ public:
 
         py::dict result;
         py::dict total;
+        total["name"] = std::string(stats.total.name);
         py::dict voltage_stats;
         py::dict current_stats;
         py::dict power_stats;
@@ -168,23 +175,25 @@ public:
         result["total"] = total;
 
         py::list sensors;
-        for (int i = 0; i < stats.sensor_count; i++) {
-            py::dict sensor;
-            sensor["name"] = std::string(stats.sensors[i].name);
-            
-            py::dict sensor_voltage_stats;
-            py::dict sensor_current_stats;
-            py::dict sensor_power_stats;
+        if (stats.sensor_count > 0 && stats.sensors != nullptr) {
+            for (int i = 0; i < stats.sensor_count; i++) {
+                py::dict sensor;
+                sensor["name"] = std::string(stats.sensors[i].name);
+                
+                py::dict sensor_voltage_stats;
+                py::dict sensor_current_stats;
+                py::dict sensor_power_stats;
 
-            add_stats_to_dict(sensor_voltage_stats, stats.sensors[i].voltage);
-            add_stats_to_dict(sensor_current_stats, stats.sensors[i].current);
-            add_stats_to_dict(sensor_power_stats, stats.sensors[i].power);
+                add_stats_to_dict(sensor_voltage_stats, stats.sensors[i].voltage);
+                add_stats_to_dict(sensor_current_stats, stats.sensors[i].current);
+                add_stats_to_dict(sensor_power_stats, stats.sensors[i].power);
 
-            sensor["voltage"] = sensor_voltage_stats;
-            sensor["current"] = sensor_current_stats;
-            sensor["power"] = sensor_power_stats;
+                sensor["voltage"] = sensor_voltage_stats;
+                sensor["current"] = sensor_current_stats;
+                sensor["power"] = sensor_power_stats;
 
-            sensors.append(sensor);
+                sensors.append(sensor);
+            }
         }
         result["sensors"] = sensors;
         result["sensor_count"] = stats.sensor_count;
@@ -219,12 +228,14 @@ public:
      * @brief Get the names of all sensors
      * @return Python list containing sensor names
      * @throws std::runtime_error if getting sensor names fails
+     * @deprecated This function is unsafe and will be removed in a future version.
+     *             Please use get_latest_data() or get_statistics() instead.
      */
     py::object get_sensor_names() {
         int count = get_sensor_count();
         std::vector<char*> names(count);
         for (int i = 0; i < count; i++) {
-            names[i] = new char[64];
+            names[i] = new char[64];  // 使用固定大小的缓冲区，与 pm_sensor_data_t 中的 name 字段大小一致
         }
 
         if (pm_get_sensor_names(handle_, names.data(), &count) != PM_SUCCESS) {
@@ -261,7 +272,13 @@ PYBIND11_MODULE(jetpwmon, m) {
         .def("get_statistics", &PowerMonitor::get_statistics)
         .def("reset_statistics", &PowerMonitor::reset_statistics)
         .def("get_sensor_count", &PowerMonitor::get_sensor_count)
-        .def("get_sensor_names", &PowerMonitor::get_sensor_names);
+        .def("get_sensor_names", [](PowerMonitor& self) {
+            PyErr_WarnEx(PyExc_DeprecationWarning,
+                        "This function is unsafe and will be removed in a future version. "
+                        "Please use get_latest_data() or get_statistics() instead.",
+                        1);
+            return self.get_sensor_names();
+        });
 
     // 导出错误码枚举
     py::enum_<pm_error_t>(m, "ErrorCode")

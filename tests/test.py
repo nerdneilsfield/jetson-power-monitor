@@ -4,6 +4,7 @@
 import unittest
 import jetpwmon
 import time
+import warnings
 
 class TestJetPwMon(unittest.TestCase):
     def setUp(self):
@@ -148,12 +149,28 @@ class TestJetPwMon(unittest.TestCase):
         self.assertIsInstance(count, int)
         self.assertGreaterEqual(count, 0)
         
-        # Get sensor names
-        names = self.monitor.get_sensor_names()
-        self.assertIsInstance(names, list)
-        self.assertEqual(len(names), count)
-        for name in names:
-            self.assertIsInstance(name, str)
+        # Test deprecated get_sensor_names function
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            names = self.monitor.get_sensor_names()
+            self.assertIsInstance(names, list)
+            self.assertEqual(len(names), count)
+            for name in names:
+                self.assertIsInstance(name, str)
+                self.assertGreater(len(name), 0)
+            # 验证是否收到弃用警告
+            self.assertTrue(len(w) > 0)
+            self.assertTrue(issubclass(w[-1].category, DeprecationWarning))
+            
+        # Test getting sensor names through get_latest_data (recommended way)
+        data = self.monitor.get_latest_data()
+        self.assertEqual(data['sensor_count'], count)
+        if count > 0:
+            self.assertGreater(len(data['sensors']), 0)
+            for sensor in data['sensors']:
+                self.assertIn('name', sensor)
+                self.assertIsInstance(sensor['name'], str)
+                self.assertGreater(len(sensor['name']), 0)
             
     def test_error_handling(self):
         """Test error handling functionality"""
