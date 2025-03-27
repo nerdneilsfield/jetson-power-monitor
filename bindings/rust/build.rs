@@ -1,6 +1,6 @@
 fn main() {
-    let target = std::env::var("TARGET").unwrap_or_else(|_| String::from(""));
-    let host = std::env::var("HOST").unwrap_or_else(|_| String::from(""));
+    // let target = std::env::var("TARGET").unwrap_or_else(|_| String::from(""));
+    // let host = std::env::var("HOST").unwrap_or_else(|_| String::from(""));
     
     let mut build = cc::Build::new();
     
@@ -11,14 +11,14 @@ fn main() {
         .flag("-Wall")
         .flag("-Wextra");
     
-    // 如果是交叉编译到 ARM64
-    if target.contains("aarch64") && !host.contains("aarch64") {
-        build.compiler("aarch64-linux-gnu-gcc");
-        println!("cargo:rustc-link-search=native=/usr/aarch64-linux-gnu/lib");
-        println!("cargo:rustc-link-lib=ncurses");
-    } else {
-        println!("cargo:rustc-link-lib=ncurses");
-    }
+    // // 如果是交叉编译到 ARM64
+    // if target.contains("aarch64") && !host.contains("aarch64") {
+    //     build.compiler("aarch64-linux-gnu-gcc");
+    //     println!("cargo:rustc-link-search=native=/usr/aarch64-linux-gnu/lib");
+    //     println!("cargo:rustc-link-lib=ncurses");
+    // } else {
+    //     println!("cargo:rustc-link-lib=ncurses");
+    // }
     
     build.static_flag(true)
          .compile("jetpwmon");

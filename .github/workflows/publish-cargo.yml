@@ -21,14 +21,6 @@ jobs:
         with:
           components: clippy, rustfmt
 
-      - name: Install dependencies
-        run: |
-          sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config
-          sudo apt-get install -y libncurses-dev:arm64
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
       - name: Verify crate
         working-directory: bindings/rust  # Directory already correctly specified
         run: |
