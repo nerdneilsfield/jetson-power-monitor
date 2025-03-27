@@ -42,12 +42,31 @@ jobs:
       - name: Setup cross-compilation
         if: matrix.arch == 'arm64' && runner.os == 'Linux'
         run: |
-          # Install basic cross-compilation tools first (on amd64)
+          # Install basic cross-compilation tools first (on native arch)
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu software-properties-common
 
           # Add arm64 architecture
           sudo dpkg --add-architecture arm64
+
+          # --- NEW: Restrict default sources to native architecture ---
+          NATIVE_ARCH=$(dpkg --print-architecture)
+          echo "Native architecture is: ${NATIVE_ARCH}"
+          echo "Restricting default APT sources to [arch=${NATIVE_ARCH}]"
+          # Modify the main sources.list file
+          sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+          sudo sed -i -e "s/^deb http/deb [arch=${NATIVE_ARCH}] http/" /etc/apt/sources.list
+          # Modify files in sources.list.d (handle potential existing arch qualifiers)
+          for list_file in /etc/apt/sources.list.d/*.list; do
+            if [ -f "$list_file" ]; then
+              echo "Processing $list_file"
+              sudo cp "$list_file" "${list_file}.bak"
+              # Add arch qualifier only if the line starts with 'deb http' and doesn't already have one
+              sudo sed -i -e "/^deb http/ s/^deb /deb [arch=${NATIVE_ARCH}] /" "$list_file"
+            fi
+          done
+          echo "Default sources modified."
+          # --- End of NEW section ---
 
           # Get Ubuntu Codename (e.g., focal, jammy, noble)
           source /etc/os-release
@@ -55,28 +74,27 @@ jobs:
           echo "Using Ubuntu Codename: $UBUNTU_CODENAME for arm64 sources"
 
           # Add the 'ports.ubuntu.com' repository specifically for arm64
-          # Using add-apt-repository to handle GPG keys automatically
-          sudo apt-get install -y software-properties-common
+          # Ensure previous add-apt-repository commands are cleaned up if run before
+          # sudo rm -f /etc/apt/sources.list.d/ports_ubuntu_com_ubuntu_ports*.list
           sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME} main restricted universe multiverse"
           sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-updates main restricted universe multiverse"
           sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-backports main restricted universe multiverse"
           sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-security main restricted universe multiverse"
+          echo "Added arm64 sources from ports.ubuntu.com"
 
-          # Update package lists AFTER adding the new architecture and sources
-          # This update will now fetch lists for both amd64 (from default sources) and arm64 (from ports.ubuntu.com)
-          sudo apt-get update
+          # --- Final Update ---
+          # Update package lists AFTER modifying native sources and adding arm64 sources
+          echo "Running final apt-get update..."
+          sudo apt-get update -o Debug::Acquire::http=true # Enable debug output for http
 
-          # Install necessary arm64 build dependencies (and native ones if needed again)
-          # Note: build-essential, cmake, pkg-config were already installed in the previous step for amd64.
-          # You might only need the :arm64 libraries here.
+          # Install necessary arm64 build dependencies
           echo "Installing arm64 libraries..."
           sudo apt-get install -y libncurses-dev:arm64
-          # Add any other required :arm64 dependencies here, e.g.:
-          # sudo apt-get install -y zlib1g-dev:arm64 libssl-dev:arm64 etc...
+          # Add any other required :arm64 dependencies here
 
           # Set up CMake toolchain environment variable (if your toolchain file needs it)
           echo "CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/.github/toolchain-arm64.cmake" >> $GITHUB_ENV
-        
+
       # Build and package
       - name: Configure CMake
         run: |
@@ -129,7 +147,6 @@ jobs:
       contents: write
       packages: write
     steps:
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
