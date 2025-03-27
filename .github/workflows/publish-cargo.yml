@@ -30,7 +30,7 @@ jobs:
           cp -r ../../src/jetpwmon.c vendor/src/
           cp -r ../../LICENSE vendor/
           cp -r ../../README.md vendor/
-          cargo package --no-verify
+          cargo package --no-verify --allow-dirty
 
       - name: Publish crate
         working-directory: bindings/rust  # Directory already correctly specified

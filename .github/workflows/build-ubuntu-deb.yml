@@ -39,16 +39,43 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config libncurses-dev
 
-      # Configure cross-compilation environment (if necessary)
       - name: Setup cross-compilation
         if: matrix.arch == 'arm64' && runner.os == 'Linux'
         run: |
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          echo "CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/.github/toolchain-arm64.cmake" >> $GITHUB_ENV
-          sudo dpkg --add-architecture arm64
+          # Install basic cross-compilation tools first (on amd64)
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+          # Add arm64 architecture
+          sudo dpkg --add-architecture arm64
+
+          # Get Ubuntu Codename (e.g., focal, jammy, noble)
+          source /etc/os-release
+          UBUNTU_CODENAME=$VERSION_CODENAME
+          echo "Using Ubuntu Codename: $UBUNTU_CODENAME for arm64 sources"
+
+          # Add the 'ports.ubuntu.com' repository specifically for arm64
+          # Using add-apt-repository to handle GPG keys automatically
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME} main restricted universe multiverse"
+          sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-updates main restricted universe multiverse"
+          sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-backports main restricted universe multiverse"
+          sudo add-apt-repository "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports ${UBUNTU_CODENAME}-security main restricted universe multiverse"
+
+          # Update package lists AFTER adding the new architecture and sources
+          # This update will now fetch lists for both amd64 (from default sources) and arm64 (from ports.ubuntu.com)
+          sudo apt-get update
+
+          # Install necessary arm64 build dependencies (and native ones if needed again)
+          # Note: build-essential, cmake, pkg-config were already installed in the previous step for amd64.
+          # You might only need the :arm64 libraries here.
+          echo "Installing arm64 libraries..."
           sudo apt-get install -y libncurses-dev:arm64
+          # Add any other required :arm64 dependencies here, e.g.:
+          # sudo apt-get install -y zlib1g-dev:arm64 libssl-dev:arm64 etc...
+
+          # Set up CMake toolchain environment variable (if your toolchain file needs it)
+          echo "CMAKE_ARGS=-DCMAKE_TOOLCHAIN_FILE=${GITHUB_WORKSPACE}/.github/toolchain-arm64.cmake" >> $GITHUB_ENV
         
       # Build and package
       - name: Configure CMake
