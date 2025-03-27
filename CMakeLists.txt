@@ -112,9 +112,11 @@ if(BUILD_TESTS)
 
     add_executable(c_api_test tests/test_c_api.cpp)
     target_link_libraries(c_api_test PRIVATE jetpwmon_static GTest::gtest_main pthread)
+    add_test(NAME c_api_test COMMAND c_api_test)
     if(BUILD_CPP_BINDINGS)
         add_executable(cpp_api_test tests/test_cpp_api.cpp)
         target_link_libraries(cpp_api_test PRIVATE jetpwmon_static_cpp GTest::gtest_main pthread)
+        add_test(NAME cpp_api_test COMMAND cpp_api_test)
     endif()
 
     include(GoogleTest)
