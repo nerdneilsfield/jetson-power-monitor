@@ -54,7 +54,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-jetpwmon = "0.1.1"
+jetpwmon = "0.1.2"
 ```
 
 ### C/C++
@@ -62,7 +62,7 @@ jetpwmon = "0.1.1"
 Download the pre-built `.deb` package from the [Releases](https://github.com/yourusername/jetson-power-monitor/releases) page:
 
 ```bash
-sudo dpkg -i jetpwmon_0.1.1_amd64.deb
+sudo dpkg -i jetpwmon_0.1.2_amd64.deb
 ```
 
 Or use CMake to find and link the library in your project:
@@ -224,7 +224,7 @@ First, add `jetpwmon` as a dependency in your `Cargo.toml`. Adjust the path or v
 
 ```toml
 [dependencies]
-jetpwmon = "0.1.1"
+jetpwmon = "0.1.2"
 
 # The examples also use these crates:
 ndarray = "0.15" # For matrix example
@@ -308,7 +308,7 @@ Dependencies needed for this example:
 
 ```toml
 [dependencies]
-jetpwmon = { version = "0.1.1" } # Adjust as needed
+jetpwmon = { version = "0.1.2" } # Adjust as needed
 ndarray = "0.15"
 rand = "0.8"
 ```

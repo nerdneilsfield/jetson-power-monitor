@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jetpwmon"
-version = "0.1.1"
+version = "0.1.2"
 description = "A simple power monitor for Jetson"
 authors = [
     { name = "Qi Deng", email = "dengqi935@gmail.com" }

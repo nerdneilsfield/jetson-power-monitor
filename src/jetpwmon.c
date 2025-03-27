@@ -1241,24 +1241,24 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
 
                                 /* Validate readings based on sensor type */
                                 bool valid_reading = true;
-                                if (strstr(handle->sensor_names[i], "VDD_IN"))
-                                {
-                                        /* VDD_IN 是系统总功耗 */
-                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
-                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
-                                }
-                                else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
-                                {
-                                        /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
-                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
-                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
-                                }
-                                else if (strstr(handle->sensor_names[i], "VDD_SOC"))
-                                {
-                                        /* VDD_SOC 是 SoC 电源轨 */
-                                        if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
-                                        if (current < 0.0 || current > 10000.0) valid_reading = false;
-                                }
+                                // if (strstr(handle->sensor_names[i], "VDD_IN"))
+                                // {
+                                //         /* VDD_IN 是系统总功耗 */
+                                //         if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                //         if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                // }
+                                // else if (strstr(handle->sensor_names[i], "VDD_CPU_GPU_CV"))
+                                // {
+                                //         /* VDD_CPU_GPU_CV 是 CPU + GPU + CV 组合电源轨 */
+                                //         if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                //         if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                // }
+                                // else if (strstr(handle->sensor_names[i], "VDD_SOC"))
+                                // {
+                                //         /* VDD_SOC 是 SoC 电源轨 */
+                                //         if (voltage < 18000.0 || voltage > 20000.0) valid_reading = false;
+                                //         if (current < 0.0 || current > 10000.0) valid_reading = false;
+                                // }
 
                                 if (!valid_reading)
                                 {
@@ -1281,8 +1281,8 @@ static pm_error_t read_sensor_data(pm_handle_t handle)
 
                                 /* Validate readings */
                                 bool valid_reading = true;
-                                if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
-                                if (current < 0.0 || current > 10.0) valid_reading = false;
+                                // if (voltage < 0.0 || voltage > 30.0) valid_reading = false;
+                                // if (current < 0.0 || current > 10.0) valid_reading = false;
 
                                 if (!valid_reading)
                                 {

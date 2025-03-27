@@ -55,7 +55,7 @@ pip install jetpwmon
 
 ```toml
 [dependencies]
-jetpwmon = "0.1.1"
+jetpwmon = "0.1.2"
 ```
 
 ### C/C++
@@ -63,7 +63,7 @@ jetpwmon = "0.1.1"
 从 [Releases](https://github.com/yourusername/jetson-power-monitor/releases) 页面下载预编译的 `.deb` 包：
 
 ```bash
-sudo dpkg -i jetpwmon_0.1.1_amd64.deb
+sudo dpkg -i jetpwmon_0.1.2_amd64.deb
 ```
 
 或者使用 CMake 在你的项目中查找和链接库：
@@ -229,7 +229,7 @@ monitor_power_consumption(cpu_intensive_task)
 
 ```toml
 [dependencies]
-jetpwmon = "0.1.1"
+jetpwmon = "0.1.2"
 
 # 示例也使用了这些crate：
 ndarray = "0.15" # 用于矩阵示例
@@ -312,7 +312,7 @@ fn main() -> Result<(), Error> {
 
 ```toml
 [dependencies]
-jetpwmon = { version = "0.1.1" } # 根据需要进行调整
+jetpwmon = { version = "0.1.2" } # 根据需要进行调整
 ndarray = "0.15"
 rand = "0.8"
 ```

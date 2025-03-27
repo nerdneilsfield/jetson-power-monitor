@@ -2,7 +2,7 @@
 """
 jetpwmon - A simple power monitor for Jetson.
 """
-__version__ = "0.1.1" # Keep version consistent
+__version__ = "0.1.2" # Keep version consistent
 
 try:
     # Import symbols from the compiled C++ module named '_core'
