@@ -1,14 +1,18 @@
 fn main() {
     // 编译 C 库
     cc::Build::new()
-        .file("../../src/jetpwmon.c")
-        .include("../../include")
+        .file("vendor/src/jetpwmon.c")
+        .include("vendor/include")
         .flag("-std=c99")
         .flag("-Wall")
         .flag("-Wextra")
-        .compile("jetpwmon");
+        .compile("libjetpwmon");
+
+    println!("cargo:rustc-link-lib=dylib=jetpwmon");
+
+    println!("cargo:rustc-link-search=native={}", std::env::var("OUT_DIR").unwrap());
 
     println!("cargo:rerun-if-changed=src/lib.rs");
-    println!("cargo:rerun-if-changed=../../src/jetpwmon.c");
-    println!("cargo:rerun-if-changed=../../include/jetpwmon.h");
+    println!("cargo:rerun-if-changed=vendor/src/jetpwmon.c");
+    println!("cargo:rerun-if-changed=vendor/include/jetpwmon.h");
 } 

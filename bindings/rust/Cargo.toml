@@ -1,6 +1,6 @@
 [package]
 name = "jetpwmon"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Qi Deng <dengqi935@gmail.com>"]
 description = "Rust bindings for Jetson Power Monitor"
@@ -14,11 +14,10 @@ homepage = "https://github.com/nerdneilsfield/jetson-power-monitor"
 rust-version = "1.60.0"
 include = [
     "src/**/*",
+    "vendor/**/*",
     "Cargo.toml",
     "README.md",
-    "../../LICENSE",
-    "../../include/**/*",
-    "../../src/**/*",
+    "LICENSE",
     "examples/**/*",
     "tests/**/*",
     "build.rs",

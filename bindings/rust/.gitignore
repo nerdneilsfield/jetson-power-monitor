@@ -21,3 +21,9 @@ target/
 *.build.log.bz2
 *.build.log.xz
 *.build.log.zst
+
+# Vendor files
+vendor/include/jetpwmon/*
+vendor/src/*
+LICENSE
+README.md
